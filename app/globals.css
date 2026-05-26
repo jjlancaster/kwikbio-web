@@ -1,0 +1,8 @@
+@tailwind base;
+  @tailwind components;
+  @tailwind utilities;
+
+  :root { --font-sans: ui-sans-serif, system-ui, sans-serif; }
+
+  html, body { @apply bg-white text-slate-900 antialiased; }
+  
