@@ -1,9 +1,43 @@
 ---
 title: "How FastScience! Cuts Research Time with Graph AI"
 date: "2026-05-25"
-excerpt: "Neo4j as the causal backbone. SLAM as the discovery layer. QUBO as the optimizer."
+excerpt: "Neo4j as the causal backbone. SLAM as the discovery layer. QUBO as the optimizer. Why this stack, and why now."
 ---
 
-*(Day-2 content sprint. Full post lands tomorrow.)*
+The instinct in 2026 is to throw a bigger language model at any research problem. That instinct is wrong, and it costs you weeks of compute.
 
-The trick isn't bigger LLMs. It's modeling causality as a graph, mining it sub-linearly with SLAM, and reducing the surviving hypotheses to a QUBO problem a quantum annealer can actually solve.
+Here's the stack we actually use, and why each layer is non-negotiable.
+
+## Layer 1: Neo4j as the causal backbone
+
+We don't store papers — we store **entities and causal arcs** extracted from papers. A typical kwiKBio knowledge graph for a single domain (say, microbial bioenergy) contains ~50,000 entities and ~200,000 typed arcs. Arc types matter: `regulates`, `inhibits`, `co-occurs-with`, and `causally-precedes` are not interchangeable.
+
+Neo4j is the right database here because **path queries are first-class**. The questions we ask — "what regulates X two hops away from Y?" — are 5-line Cypher queries on Neo4j and 50-line monstrosities on Postgres.
+
+## Layer 2: SLAM as the discovery layer
+
+Sub-Linear Association Mining (Evan Steeg, US 6,493,637) was designed to find higher-order correlations in multidimensional data — the kind that pair-wise statistics miss entirely.
+
+We use SLAM to discover candidate arcs the literature hasn't yet annotated. The output is always a **hypothesis**, never a claim. SLAM surfaces "these three entities co-cluster in 87% of relevant studies"; the rest of the pipeline tests whether that co-clustering is causally meaningful.
+
+## Layer 3: PRISM-9 reduction
+
+Most well-posed research problems have a remarkable property: they're **dominated by ≤9 entities**. The other 49,991 nodes in the graph contribute noise.
+
+PRISM-9 forces that reduction. It picks the 9 entities whose joint variance explains the most outcome variance, then prunes everything else for the current query. This is the step that makes the next layer tractable.
+
+## Layer 4: Cube-27 expansion
+
+Each of the 9 dominant entities expands fractally into 3 sub-factors, giving a 3×3×3 cube of 27 leaf variables. The geometry isn't arbitrary — it preserves causal locality, so adjacent cells in the cube correspond to causally adjacent sub-factors.
+
+## Layer 5: QUBO solving
+
+With 27 binary variables (active / inactive sub-factor), path planning becomes a Quadratic Unconstrained Binary Optimization. That's a problem class quantum annealers (D-Wave Advantage at 5,000+ qubits) solve directly.
+
+We get an optimal causal path in **seconds** on quantum hardware. Classical simulated annealing handles it in **minutes** when quantum capacity is unavailable. Either way, the user sees ranked experiments before they finish their coffee.
+
+## Why not just bigger LLMs?
+
+Because LLMs hallucinate causal arcs, and you can't ground them in your specific domain manual without RAG plumbing that costs more than the model. The graph layer eliminates a class of failure modes that no amount of pre-training fixes.
+
+LLMs are still in the loop — they're our natural-language interface and our summarizer. But they don't drive the science.
