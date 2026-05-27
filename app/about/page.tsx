@@ -1,6 +1,6 @@
 export const metadata = {
     title: "About kwiKBio — FastScience! Methodology",
-    description: "The 33-year story of FastScience! and the ARS engine behind kwiKBio.",
+    description: "The FastScience! methodology and the ARS engine behind kwiKBio.",
   };
 
   export default function AboutPage() {
@@ -9,7 +9,7 @@ export const metadata = {
         <h1>What is kwiKBio?</h1>
         <p className="lead">
           kwiKBio is the web entry point to the <strong>FastScience!™ v7</strong> research engine —
-          a 33-year-old methodology, freshly accelerated by graph AI and quantum solvers.
+          a methodology refined over decades, now accelerated by graph AI and quantum-class solvers.
         </p>
 
         <h2>The pipeline</h2>
@@ -17,28 +17,27 @@ export const metadata = {
         <ol>
           <li><strong>Question</strong> — drop your research goal into the Gateway, freeform.</li>
           <li><strong>Domain Manual</strong> — your field's canonical knowledge is loaded as RDF/Turtle. SHACL validates the graph schema.</li>
-          <li><strong>Knowledge Graph</strong> — entities and causal arcs land in Neo4j. Steeg SLAM (Sub-Linear Association Mining) discovers higher-order k-tuple correlations.</li>
-          <li><strong>PRISM-9</strong> — the system reduces your problem to ≤9 dominant factors. No more, no less.</li>
+          <li><strong>Knowledge Graph</strong> — entities and causal arcs land in Neo4j. Sub-linear association mining surfaces candidate higher-order correlations.</li>
+          <li><strong>PRISM-9</strong> — the system reduces your problem to ≤9 dominant factors.</li>
           <li><strong>Cube-27</strong> — fractal 3×3×3 expansion of those 9 nodes into 27 sub-factors. The geometry preserves causal locality.</li>
-          <li><strong>QUBO Solve</strong> — the path-planning problem becomes a Quadratic Unconstrained Binary Optimization, solved on quantum-annealing hardware where available, classical fallback otherwise.</li>
-          <li><strong>Experiment</strong> — the ARS engine emits ranked, runnable experiment proposals routed to matched CROs through ExpChooser.</li>
+          <li><strong>QUBO Solve</strong> — the path-planning problem is reformulated as a Quadratic Unconstrained Binary Optimization. Quantum annealing is used where available; classical simulated annealing serves as fallback.</li>
+          <li><strong>Experiment</strong> — the ARS engine emits ranked, runnable experiment proposals; Pro and above route them to matched CROs through ExpChooser.</li>
         </ol>
 
-        <h2>Version history — 33 years of FastScience!</h2>
+        <h2>Version history — FastScience!</h2>
+        <p>FastScience! is the name of an evolving research methodology developed by the founder over multiple decades. Major iterations have introduced new modeling techniques as the supporting technology stack matured:</p>
         <ul>
-          <li><strong>v1 (1993):</strong> FastScience! method designed — the Mod-Mon couple.</li>
-          <li><strong>v2 (1994):</strong> IM3, citizen-science crowdsourcing, reverse-engineered causal flow dynamics.</li>
-          <li><strong>v3 (2001):</strong> 3D-GEMS multi-dimensional real-world modeling.</li>
-          <li><strong>v4 (2007–9):</strong> AIM3 proposed at Vrije Universiteit; energy-system modeling.</li>
-          <li><strong>v5 (2018–22):</strong> Semantic Web, Watson NLP, KOTF, AIM4IT HD.</li>
-          <li><strong>v6:</strong> Deep learning, reinforcement learning, RDF, Neo4j as causal backbone.</li>
-          <li><strong>v7 (Q1 2026):</strong> Quantum solving for NP-hard QUBO problems. ← current</li>
+          <li><strong>Early versions:</strong> the original Mod-Mon couple, citizen-science crowdsourcing, and reverse-engineered causal flow dynamics.</li>
+          <li><strong>Mid-period versions:</strong> multi-dimensional real-world modeling and energy-system applications.</li>
+          <li><strong>Recent versions:</strong> Semantic Web ingestion, RDF/Neo4j as a causal backbone, deep-learning summarization in the loop.</li>
+          <li><strong>v7 (2026):</strong> QUBO formulation and quantum-annealing acceleration. ← current</li>
         </ul>
+        <p className="text-sm text-slate-500"><em>Detailed version history and references available on request.</em></p>
 
         <h2>Trust signals</h2>
         <ul>
-          <li><strong>US Patent 11,282,088</strong> — Automated Research System (ARS), J. Lancaster. Priority 2007-01-22, granted, in force.</li>
-          <li>Built atop the academic prior art of <strong>Steeg SLAM</strong> (Sub-Linear Association Mining; US 6,493,637, expired) — explicitly cited in the ARS patent family.</li>
+          <li><strong>US Patent 11,282,088</strong> — "Business methods and systems for offering and obtaining research services" (Automated Research System / ARS), inventor J. Lancaster. Priority date 2007-01-22.</li>
+          <li>The ARS pipeline draws on a long line of academic prior art in sub-linear association mining and graph-based causal discovery.</li>
           <li><strong>HydroJoule LLC</strong> parent — kwiKBio Inc., Climate Research Inc., Vermont Medical College, LOOJL.</li>
           <li>Production infrastructure: dual-VPS Hostinger deployment with PostgreSQL, Neo4j, and PM2 process supervision.</li>
         </ul>
@@ -46,18 +45,20 @@ export const metadata = {
         <h2>Who's behind this</h2>
         <p>
           kwiKBio is built by a small mesh of human and AI agents coordinating under
-          HydroJoule LLC. Justin Lancaster (founder, patent author) leads product and science.
-          The agent mesh — Hydro, Joule, Watt, Lumen, Photon, and others — handles
-          infrastructure, builds, and continuous integration. We work in the open: every
-          decision is logged, every commit is signed, and every user query stays in
-          your tenant.
+          HydroJoule LLC. Justin Lancaster (founder, ARS patent author) leads product and science.
+          An agent mesh handles infrastructure, builds, and continuous integration. We
+          work transparently: decisions are logged, commits are signed, and your query
+          data stays in your tenant boundary — see <a href="/legal/privacy">Privacy</a> for exact controls and carve-outs.
         </p>
 
-        <h2>The honest disclaimer</h2>
+        <h2>Beta status and honest disclaimer</h2>
         <p>
-          FastScience! accelerates hypothesis generation. It does not replace experimental
-          verification, peer review, or your judgment. Outputs are provisional and require
-          human validation before any clinical or regulatory use.
+          kwiKBio is a <strong>beta-stage research tool</strong>. FastScience! accelerates
+          hypothesis generation and experiment ranking. It does <strong>not</strong> replace experimental
+          verification, peer review, regulatory submissions, or your own judgment. Outputs
+          are provisional and require human validation before any clinical, regulatory,
+          commercial, or safety-critical use. Do not upload Protected Health Information
+          (PHI) or other regulated personal data — see <a href="/legal/terms">Terms §4</a>.
         </p>
       </section>
     );

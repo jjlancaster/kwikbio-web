@@ -1,57 +1,61 @@
 ---
-title: "Microbial Consortia Bioenergy: A PRISM-9 Case Study"
+title: "Microbial Consortia Bioenergy: A PRISM-9 Walkthrough"
 date: "2026-05-24"
-excerpt: "Our first vertical slice — methane yield from agricultural waste, compressed from 14,000 candidate variables to 9 controlling factors."
+excerpt: "How FastScience! v7 compresses a complex bioenergy question to 9 controlling factors. An illustrative walkthrough."
 ---
 
-When we picked the first vertical slice for FastScience! v7, we deliberately chose a problem with three properties: large literature, real economic stakes, and a working researcher willing to validate every claim.
+> **Note:** This walkthrough is **illustrative**. Specific graph sizes, factor selections, and proposal numbers reflect a representative scenario for the methodology, not a peer-reviewed clinical trial result. Where we cite figures from a production run, they are clearly labeled as such.
+
+When we picked the first vertical slice for FastScience! v7, we deliberately chose a problem with three properties: large literature, real economic stakes, and working researchers willing to validate every claim.
 
 We landed on **microbial consortia bioenergy** — specifically, two-organism consortia for methane yield from agricultural digestate.
 
 ## The problem
 
-Anaerobic digestion of corn-stover slurry produces methane. Yield varies by 4× across reported studies, and nobody fully understands why. Single-organism cultures underperform; two-organism consortia sometimes win dramatically and sometimes collapse.
+Anaerobic digestion of corn-stover slurry produces methane. Reported yields vary several-fold across published studies, and no single factor fully explains the variance. Single-organism cultures tend to underperform; two-organism consortia sometimes win dramatically and sometimes collapse.
 
-Hypothesis: there's a small set of dominant variables — substrate composition, dominant species pair, retention time, micronutrient availability, pH buffering — that explain most of the variance.
+Hypothesis: there is a small set of dominant variables — substrate composition, dominant species pair, retention time, micronutrient availability, pH buffering — that explain most of the variance.
 
-## What the graph looked like
+## What the graph looks like (representative production figures)
 
-After ingesting the relevant literature (~3,200 papers from PubMed + AGRICOLA, plus the USDA Anaerobic Digester registry), our Neo4j graph held:
+After ingesting the relevant literature (drawn from public sources including PubMed and AGRICOLA), our Neo4j graph for this domain currently holds approximately:
 
-- **14,372 entities** — organisms, substrates, intermediates, environmental conditions, observed outcomes.
-- **51,884 typed arcs** — `metabolizes`, `inhibits`, `co-occurs-with`, `produces`.
-- **214 distinct outcome metrics** — methane yield, VFA accumulation, biomass production, etc.
+- **~14,000 entities** — organisms, substrates, intermediates, environmental conditions, observed outcomes.
+- **~50,000 typed arcs** — `metabolizes`, `inhibits`, `co-occurs-with`, `produces`.
+- **~200 distinct outcome metrics** — methane yield, VFA accumulation, biomass production, etc.
 
-## What PRISM-9 picked
+These figures are from one snapshot of the production graph at the time of writing and will grow as new literature is ingested.
 
-PRISM-9 reduced 14,372 entities to these 9 dominant factors for the question "maximize methane yield from corn-stover digestate":
+## What PRISM-9 picks for this question
 
-1. Dominant primary degrader genus (*Clostridium* vs *Ruminococcus*)
-2. Secondary methanogen species (*Methanosarcina* vs *Methanosaeta*)
+For the question *"maximize methane yield from corn-stover digestate,"* PRISM-9 reduces that graph to these 9 dominant factors:
+
+1. Dominant primary degrader genus (e.g. *Clostridium* vs *Ruminococcus*)
+2. Secondary methanogen species (e.g. *Methanosarcina* vs *Methanosaeta*)
 3. C:N ratio of input substrate
 4. Hydraulic retention time
 5. Operating pH (buffered vs unbuffered)
 6. Trace-element supplementation (Ni / Co availability)
-7. Inoculum source (cow rumen vs municipal digester sludge)
+7. Inoculum source (e.g. cow rumen vs municipal digester sludge)
 8. Temperature regime (mesophilic vs thermophilic)
 9. Pre-treatment of substrate (none vs steam-explosion vs alkaline)
 
-Notably absent: total VFA load, ammonia concentration, mixing rate. PRISM-9 deemed these correlated-but-not-causal for this specific question.
+Notably absent for this specific question: total VFA load, ammonia concentration, mixing rate. PRISM-9 deemed these correlated-but-not-causal at the reduction threshold.
 
-## What Cube-27 surfaced
+## What Cube-27 surfaces
 
-The 9 factors fanned out into 27 leaf variables. The QUBO solver found one strongly causally coherent configuration:
+The 9 factors fan out into 27 leaf variables. The QUBO solver returns one strongly causally coherent candidate configuration of the form:
 
-> ***Ruminococcus albus* + *Methanosarcina barkeri*, mesophilic, C:N ≈ 25, retention 18d, buffered to pH 7.0, Ni-supplemented, rumen inoculum, steam-exploded substrate.***
+> ***Ruminococcus albus* + *Methanosarcina barkeri*, mesophilic, C:N ≈ 25, retention ≈ 18d, buffered to pH ≈ 7.0, Ni-supplemented, rumen inoculum, steam-exploded substrate.***
 
-## The experiment we proposed
+Other near-optimal configurations are returned as alternatives; users review them before booking experiments.
 
-The ARS engine emitted a 4-arm comparative trial: the optimal configuration above, two single-variable perturbations (swap methanogen, swap pre-treatment), and an industry-standard control. Estimated cost: $48K. Estimated time to results: 6 weeks. Matched CROs (USDA-registered): 7.
+## The kind of experiment that gets proposed
 
-Total time from question to ranked experiment proposal: **97 minutes**, including domain-manual review and human sign-off.
+From a configuration like the above, the ARS engine emits a comparative trial outline — typically the favored configuration plus one or two single-variable perturbations plus an industry-standard control. The output includes order-of-magnitude cost and timing estimates and a shortlist of registered CROs capable of executing the protocol.
 
-## What's next
+End-to-end time from a freeform research question to a ranked experiment proposal in a Researcher-tier session is on the order of an hour or two, depending on domain manual readiness and human sign-off pace.
 
-The trial is in arm 2 as of this writing. Whatever the outcome, the SSKM updates, and the next user querying "microbial bioenergy" inherits the refined causal model.
+## What this is and is not
 
-That's FastScience! v7 working as designed.
+This is a methodology walkthrough — a demonstration of how the FastScience! v7 pipeline behaves on a non-trivial bioenergy question. It is **not** a peer-reviewed claim about specific microbial consortia performance. Treat the proposed configurations as hypotheses requiring experimental verification, exactly as you would treat any other computationally generated hypothesis.
