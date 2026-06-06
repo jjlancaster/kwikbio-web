@@ -24,17 +24,22 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "invalid_vertical" }, { status: 400 });
   }
 
-  // Forward to the Express API on Jewel (:3002). It may be unreachable from
-  // Replit dev — acknowledge the capture regardless so the UX never breaks.
-  try {
-    await fetch(`${API_INTERNAL}/waitlist`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email, vertical, source: "kwikbio-web" }),
-    }).catch(() => {});
-  } catch {
-    /* upstream optional in dev */
-  }
+  // Forward to the Express API on Jewel (:3002), truly fire-and-forget: do NOT
+  // await it, so response latency is never coupled to upstream. A short abort
+  // timeout keeps the dangling socket from lingering on the long-lived PM2
+  // process. Errors are swallowed — the capture is acknowledged regardless so
+  // the UX never breaks. (kwikbio-web runs as a persistent Node server, not a
+  // serverless function, so the un-awaited request completes after we respond.)
+  const ac = new AbortController();
+  const timeout = setTimeout(() => ac.abort(), 5_000);
+  fetch(`${API_INTERNAL}/waitlist`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ email, vertical, source: "kwikbio-web" }),
+    signal: ac.signal,
+  })
+    .catch(() => {})
+    .finally(() => clearTimeout(timeout));
 
   return NextResponse.json({ ok: true, email, vertical });
 }

@@ -27,6 +27,15 @@ export default function ARSQueryBox() {
     inputRef.current?.focus();
   }, []);
 
+  function gracefulFallback() {
+    setResult({
+      status: "complete",
+      fallback: true,
+      message:
+        "The live ARS engine is warming up. Your question is valid — create a free account and we'll run the full PRISM-9 reduction as soon as the Gateway is online.",
+    });
+  }
+
   async function run(raw: string) {
     const q = raw.trim();
     if (!q || busy) return;
@@ -51,44 +60,58 @@ export default function ARSQueryBox() {
         return;
       }
 
-      if (!res.body) return;
+      if (!res.body) {
+        gracefulFallback();
+        return;
+      }
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buf = "";
+      let gotTerminal = false;
+
+      const handleBlock = (block: string) => {
+        const dataLine = block
+          .split("\n")
+          .find((l) => l.startsWith("data:"));
+        if (!dataLine) return;
+        try {
+          const evt: ArsEvent = JSON.parse(dataLine.slice(5).trim());
+          if (evt.status === "running") {
+            setStatusMsg(evt.message ?? "Working…");
+          } else if (evt.status === "limit") {
+            setLimit(evt.message ?? null);
+            gotTerminal = true;
+          } else {
+            setResult(evt);
+            gotTerminal = true;
+          }
+        } catch {
+          /* ignore malformed SSE block */
+        }
+      };
+
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
-        buf += decoder.decode(value, { stream: true });
+        // Normalize CRLF so both "\n\n" and "\r\n\r\n" delimiters split cleanly.
+        buf = (buf + decoder.decode(value, { stream: true })).replace(
+          /\r\n/g,
+          "\n",
+        );
         const blocks = buf.split("\n\n");
         buf = blocks.pop() ?? "";
-        for (const block of blocks) {
-          const dataLine = block
-            .split("\n")
-            .find((l) => l.startsWith("data:"));
-          if (!dataLine) continue;
-          try {
-            const evt: ArsEvent = JSON.parse(dataLine.slice(5).trim());
-            if (evt.status === "running") {
-              setStatusMsg(evt.message ?? "Working…");
-            } else if (evt.status === "limit") {
-              setLimit(evt.message ?? null);
-            } else {
-              setResult(evt);
-            }
-          } catch {
-            /* ignore malformed SSE block */
-          }
-        }
+        for (const block of blocks) handleBlock(block);
       }
+      // Flush any trailing block left without a terminating delimiter.
+      if (buf.trim()) handleBlock(buf);
+
+      // Stream ended without a usable terminal event — never leave the user
+      // staring at nothing; degrade gracefully and honestly.
+      if (!gotTerminal) gracefulFallback();
     } catch {
       // Never surface a raw error — degrade gracefully and honestly.
-      setResult({
-        status: "complete",
-        fallback: true,
-        message:
-          "The live ARS engine is warming up. Your question is valid — create a free account and we'll run the full PRISM-9 reduction as soon as the Gateway is online.",
-      });
+      gracefulFallback();
     } finally {
       setBusy(false);
       setStatusMsg("");
