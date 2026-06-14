@@ -10,6 +10,7 @@ import Link from "next/link";
             <Link href="/gateway" className="hover:text-brand-700">Gateway</Link>
             <Link href="/pricing" className="hover:text-brand-700">Pricing</Link>
             <Link href="/blog" className="hover:text-brand-700">Blog</Link>
+            <Link href="/fellows" className="hover:text-brand-700 font-semibold text-brand-700">Fellows</Link>
           </nav>
           <Link href="/pricing" className="text-sm bg-brand-600 text-white px-4 py-2 rounded-md hover:bg-brand-700">Start Free</Link>
         </div>
