@@ -1,7 +1,7 @@
 import Link from "next/link";
 
   export const metadata = {
-    title: "Gateway — kwiKBio",
+    title: "Gateway",
     description: "Self-select your research path. Drug discovery, climate, bioenergy, or custom.",
   };
 
@@ -69,7 +69,12 @@ import Link from "next/link";
               on Jewel — for now, the box previews the input contract.
             </p>
             <form className="mt-6 space-y-3">
+              <label htmlFor="ars-query" className="sr-only">
+                Research question
+              </label>
               <textarea
+                id="ars-query"
+                name="query"
                 className="w-full border border-slate-300 rounded-md p-3 text-sm font-mono bg-white"
                 rows={4}
                 placeholder="e.g. Which microbial consortia maximize methane yield from agricultural waste?"

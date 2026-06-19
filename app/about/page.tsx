@@ -1,5 +1,5 @@
 export const metadata = {
-    title: "About kwiKBio — FastScience! Methodology",
+    title: "About — FastScience! Methodology",
     description: "The FastScience! methodology and the ARS engine behind kwiKBio.",
   };
 

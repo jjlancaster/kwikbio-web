@@ -1,7 +1,10 @@
 import Link from "next/link";
   import { listPosts } from "@/lib/blog";
 
-  export const metadata = { title: "Blog — kwiKBio" };
+  export const metadata = {
+    title: "Blog",
+    description: "Notes from the FastScience! frontier — research acceleration, graph AI, and ARS case studies.",
+  };
 
   export default function BlogIndex() {
     const posts = listPosts();

@@ -9,7 +9,11 @@ import { notFound } from "next/navigation";
   export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;
     const post = getPost(slug);
-    return { title: post ? `${post.title} — kwiKBio` : "Post not found" };
+    if (!post) return { title: "Post not found" };
+    return {
+      title: post.title,
+      description: post.excerpt || undefined,
+    };
   }
 
   export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {

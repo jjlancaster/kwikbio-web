@@ -1,5 +1,5 @@
 export const metadata = {
-    title: "Privacy Policy — kwiKBio",
+    title: "Privacy Policy",
     description: "How kwiKBio Inc. collects, uses, and protects your data. Beta-stage research tool.",
   };
 

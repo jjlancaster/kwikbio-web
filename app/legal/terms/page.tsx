@@ -1,5 +1,5 @@
 export const metadata = {
-    title: "Terms of Service — kwiKBio",
+    title: "Terms of Service",
     description: "Terms under which kwiKBio Inc. provides the FastScience! ARS service. Beta.",
   };
 

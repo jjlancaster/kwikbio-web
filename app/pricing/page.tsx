@@ -32,7 +32,7 @@ import PricingCard, { type Tier } from "@/components/PricingCard";
   ];
 
   export const metadata = {
-    title: "Pricing — kwiKBio",
+    title: "Pricing",
     description: "Five tiers from free to enterprise. Transparent 6% CRO pass-through. No hidden markup.",
   };
 
