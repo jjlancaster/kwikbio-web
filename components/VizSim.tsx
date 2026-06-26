@@ -2,7 +2,7 @@
 
 interface GraphNode {
   id: string;
-  name: string;
+  label: string;
   type: string;
 }
 
@@ -61,17 +61,19 @@ export default function VizSim({ nodes, edges }: { nodes: GraphNode[]; edges: Gr
           const pos = positions[n.id];
           if (!pos) return null;
           const fill = NODE_COLORS[n.type] ?? "#94a3b8";
+          const short = n.label.length > 10 ? n.label.slice(0, 9) + "…" : n.label;
           return (
             <g key={n.id} transform={`translate(${pos.x},${pos.y})`}>
               <circle r={18} fill={fill} fillOpacity={0.18} stroke={fill} strokeWidth={2} />
               <text textAnchor="middle" dy="0.35em" fontSize={8} fill="#e2e8f0"
-                style={{ userSelect: "none" } as React.CSSProperties}>
-                {n.name.length > 10 ? n.name.slice(0, 9) + "…" : n.name}
+                style={{ userSelect: "none" }}>
+                {short}
               </text>
             </g>
           );
         })}
       </svg>
+
       <div className="px-3 py-2 border-t border-slate-700 flex flex-wrap gap-3">
         {Object.entries(NODE_COLORS).map(([type, color]) => (
           <div key={type} className="flex items-center gap-1">

@@ -19,14 +19,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "pathwayModel.nodes required" }, { status: 400 });
   }
 
-  const result = runEuler(pathwayModel, steps, dt);
-  return NextResponse.json(result);
+  return NextResponse.json(runEuler(pathwayModel, steps, dt));
 }
 
 function runEuler(model: PathwayModel, steps: number, dt: number): SimulateResult {
   const nodeIds = model.nodes.map((n) => n.id);
 
-  // Initialize all nodes to baseline activation 0.1
   const state: Record<string, number> = {};
   for (const node of model.nodes) state[node.id] = 0.1;
 
@@ -44,16 +42,15 @@ function runEuler(model: PathwayModel, steps: number, dt: number): SimulateResul
     let maxDelta = 0;
 
     for (const node of model.nodes) {
-      const decay = (model.params as Record<string, number>)[`decay_${node.id}`] ?? 0.1;
-      const input = (model.params as Record<string, number>)[`input_${node.id}`] ?? 0.0;
+      const decay = model.params[`decay_${node.id}`] ?? 0.1;
+      const input = model.params[`input_${node.id}`] ?? 0.0;
       let flux = -decay * state[node.id] + input;
 
       for (const edge of model.edges) {
-        if ((edge as unknown as { target: string }).target === node.id) {
-          const e = edge as unknown as { source: string; target: string; relation: string; weight: number };
-          const inhibitory = /inhibit|suppress|block|inactivat/i.test(e.relation ?? "");
-          const w = inhibitory ? -Math.abs(e.weight ?? 0.5) : Math.abs(e.weight ?? 0.5);
-          flux += w * state[e.source];
+        if (edge.target === node.id) {
+          const inhibitory = /inhibit|suppress|block|inactivat/i.test(edge.relation);
+          const w = inhibitory ? -Math.abs(edge.weight) : Math.abs(edge.weight);
+          flux += w * state[edge.source];
         }
       }
 
