@@ -1,8 +1,14 @@
 @tailwind base;
-  @tailwind components;
-  @tailwind utilities;
+@tailwind components;
+@tailwind utilities;
 
-  :root { --font-sans: ui-sans-serif, system-ui, sans-serif; }
+:root {
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --bio-royal-purple: #4a1d8e;
+  --bio-luminous-gold: #f5c842;
+  --bio-electric-teal: #00d4c8;
+  --bio-warm-white: #faf8f5;
+  --bio-deep-navy: #0d0d2b;
+}
 
-  html, body { @apply bg-white text-slate-900 antialiased; }
-  
+html, body { @apply bg-bio-navy text-slate-200 antialiased; }
