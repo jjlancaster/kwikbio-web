@@ -2,8 +2,8 @@
 import { useState } from "react";
 import VizSim from "./VizSim";
 
-interface KTuple { subject: string; predicate: string; object: string; confidence: number; }
-interface GraphNode { id: string; name: string; type: string; activation?: number; }
+interface KTuple { subject: string; relation: string; object: string; confidence: number; }
+interface GraphNode { id: string; label: string; type: string; }
 interface GraphEdge { source: string; target: string; relation: string; weight: number; }
 interface SlamResult {
   sessionId: string;
@@ -83,7 +83,7 @@ export default function SlamPanel({ query }: { query: string }) {
                 <thead className="bg-bio-navy/80 text-slate-400 uppercase">
                   <tr>
                     <th className="px-3 py-2 text-left">Subject</th>
-                    <th className="px-3 py-2 text-left">Predicate</th>
+                    <th className="px-3 py-2 text-left">Relation</th>
                     <th className="px-3 py-2 text-left">Object</th>
                     <th className="px-3 py-2 text-right">Conf</th>
                   </tr>
@@ -92,7 +92,7 @@ export default function SlamPanel({ query }: { query: string }) {
                   {result.kTuples.map((t, i) => (
                     <tr key={i} className="hover:bg-white/5">
                       <td className="px-3 py-2 text-bio-teal">{t.subject}</td>
-                      <td className="px-3 py-2 italic text-slate-400">{t.predicate}</td>
+                      <td className="px-3 py-2 italic text-slate-400">{t.relation}</td>
                       <td className="px-3 py-2 text-bio-teal">{t.object}</td>
                       <td className="px-3 py-2 text-right font-mono text-green-400">
                         {(t.confidence * 100).toFixed(0)}%
@@ -129,7 +129,7 @@ export default function SlamPanel({ query }: { query: string }) {
                   return (
                     <div key={nodeId}
                       className="flex justify-between px-3 py-2 rounded bg-bio-navy/30 border border-slate-700">
-                      <span className="text-xs text-slate-300">{node?.name ?? nodeId}</span>
+                      <span className="text-xs text-slate-300">{node?.label ?? nodeId}</span>
                       <span className="text-xs font-mono text-bio-gold">{val.toFixed(4)}</span>
                     </div>
                   );
