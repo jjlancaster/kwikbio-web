@@ -12,6 +12,7 @@ import type {
   ProvenanceEntry,
   QMEdge,
   QMObject,
+  QMRoute,
   QueryManagerRequest,
   QueryManagerResponse,
   RelationshipStatus,
@@ -43,6 +44,7 @@ interface Seed {
   subject: string;
   objects: SeedObject[];
   edges: SeedEdge[];
+  routes?: QMRoute[];
 }
 
 const SEEDS: Record<string, Seed> = {
@@ -59,8 +61,32 @@ const SEEDS: Record<string, Seed> = {
       { source: "STAT5 signaling", target: "Erythrocytosis", relation: "drives", confidence: 0.8 },
       { source: "EPO receptor", target: "JAK2 V617F", relation: "scaffolds", confidence: 0.7 },
     ],
+    routes: [
+      { id: "A", strategy: "JAK2 inhibition (ruxolitinib)", successProbability: 0.72, timeMonths: 12, costTier: 2, risk: "med", evidenceStrength: 0.8 },
+      { id: "B", strategy: "Therapeutic phlebotomy + low-dose aspirin", successProbability: 0.64, timeMonths: 6, costTier: 1, risk: "low", evidenceStrength: 0.7 },
+      { id: "C", strategy: "Interferon-α (cytoreduction)", successProbability: 0.58, timeMonths: 18, costTier: 3, risk: "med", evidenceStrength: 0.6 },
+      { id: "D", strategy: "Allele-burden-guided combination", successProbability: 0.41, timeMonths: 24, costTier: 4, risk: "high", evidenceStrength: 0.4 },
+      { id: "E", strategy: "Watchful waiting (low-risk stratum)", successProbability: 0.5, timeMonths: 36, costTier: 1, risk: "low", evidenceStrength: 0.5 },
+    ],
   },
 };
+
+/** Derive generic routes when a seed has none (keeps the Navigation Computer populated). */
+function deriveRoutes(seed: Seed): QMRoute[] {
+  const strategies = seed.objects
+    .filter((o) => o.role !== "goal")
+    .slice(0, 4)
+    .map((o, i) => ({
+      id: String.fromCharCode(65 + i),
+      strategy: `Target ${o.label}`,
+      successProbability: Math.round(o.confidence * 100) / 100,
+      timeMonths: 6 + i * 6,
+      costTier: ((i % 4) + 1) as 1 | 2 | 3 | 4,
+      risk: (o.confidence > 0.7 ? "low" : o.confidence > 0.5 ? "med" : "high") as QMRoute["risk"],
+      evidenceStrength: Math.round(o.confidence * 100) / 100,
+    }));
+  return strategies.length ? strategies : [];
+}
 
 function subjectKey(subject: string | undefined): string {
   if (!subject) return "rbc-mpn-pv";
@@ -176,5 +202,10 @@ export async function resolveQuery(req: QueryManagerRequest): Promise<QueryManag
   };
   if (requested.includes("lope") && plan.includeLope) response.lope = [];
   if (requested.includes("prism9")) response.prism9Graph = { nodes: objects.length, edges: edges.length };
+
+  // Navigation Computer routes — Beginner sees a shortened list.
+  const allRoutes = seed.routes && seed.routes.length ? seed.routes : deriveRoutes(seed);
+  response.routes = level === "beginner" ? allRoutes.slice(0, 3) : allRoutes;
+
   return response;
 }
