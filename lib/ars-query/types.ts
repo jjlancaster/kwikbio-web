@@ -107,6 +107,20 @@ export interface QMEdge {
   provenance: ProvenanceEntry[];
 }
 
+// A "route" in the Navigation Computer — a candidate strategy to reach the
+// goal (LOPE/ExpDir surfaced in the TREE Navigation Helm metaphor).
+export interface QMRoute {
+  id: string; // "A".."E"
+  strategy: string;
+  successProbability: number; // 0..1
+  timeMonths: number;
+  costTier: 1 | 2 | 3 | 4; // $ .. $$$$
+  risk: "low" | "med" | "high";
+  evidenceStrength: number; // 0..1 (renders as bars)
+}
+
+export type GoalMode = "normal" | "dysfunction" | "cope" | "fix" | "discover";
+
 export interface QueryManagerResponse {
   subject: string;
   confidence: number;
@@ -115,6 +129,8 @@ export interface QueryManagerResponse {
   layerBound: number;
   objects: QMObject[];
   edges: QMEdge[];
+  /** Navigation Computer pathways (omitted/short at Beginner). */
+  routes?: QMRoute[];
   prism9Graph?: Record<string, unknown>;
   /** Omitted at Beginner. */
   lope?: unknown[];
