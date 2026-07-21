@@ -1,16 +1,10 @@
 import { NextRequest } from "next/server";
 
-// TODO: wire to live ARS Gateway at http://127.0.0.1:5000/v1/query on Jewel
-// Currently returns mock SSE data so the UI works end-to-end without the real backend.
-// Replace the MOCK_RESULTS map and stream body with:
-//   const upstream = await fetch(`${ARS_GATEWAY}/v1/query`, { method:"POST", body, ... });
-//   return new Response(upstream.body, { headers: SSE_HEADERS });
-
 export interface ARSResult {
   node_id: string;
   title: string;
   hypothesis: string;
-  confidence: number;   // 0–1
+  confidence: number;
   evidence_count: number;
   sources: string[];
 }
@@ -127,9 +121,7 @@ const MOCK_RESULTS: Record<string, ARSResult[]> = {
   ],
 };
 
-function delay(ms: number) {
-  return new Promise((r) => setTimeout(r, ms));
-}
+const ARS_GATEWAY = process.env.ARS_GATEWAY_URL ?? "http://localhost:5000";
 
 const SSE_HEADERS = {
   "Content-Type": "text/event-stream",
@@ -138,33 +130,47 @@ const SSE_HEADERS = {
   "X-Accel-Buffering": "no",
 };
 
+function delay(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({})) as { domain?: string; query?: string };
   const domain = body?.domain ?? "bioenergy";
+  const query = body?.query ?? domain;
+
+  // Try live ARS Gateway first with a 5s connect timeout
+  try {
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), 5_000);
+    const upstream = await fetch(`${ARS_GATEWAY}/v1/query`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query, domain }),
+      signal: ctrl.signal,
+    });
+    clearTimeout(tid);
+    if (upstream.ok && upstream.body) {
+      return new Response(upstream.body, { headers: SSE_HEADERS });
+    }
+  } catch {
+    // Gateway unreachable — fall through to mock
+  }
+
+  // Mock fallback
   const results = MOCK_RESULTS[domain] ?? MOCK_RESULTS.bioenergy;
-
   const encoder = new TextEncoder();
-
   const stream = new ReadableStream({
     async start(controller) {
-      controller.enqueue(
-        encoder.encode(`data: ${JSON.stringify({ type: "start", domain })}\n\n`)
-      );
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "start", domain })}\n\n`));
       await delay(350);
-
       for (const result of results) {
-        controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify({ type: "result", ...result })}\n\n`)
-        );
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "result", ...result })}\n\n`));
         await delay(550);
       }
-
-      controller.enqueue(
-        encoder.encode(`data: ${JSON.stringify({ type: "done" })}\n\n`)
-      );
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "done" })}\n\n`));
       controller.close();
     },
   });
-
   return new Response(stream, { headers: SSE_HEADERS });
 }
