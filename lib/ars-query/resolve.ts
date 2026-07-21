@@ -1,10 +1,12 @@
 // Query Manager lifecycle (spec §3.2):
 //   parse → plan → route → execute → assemble → provenance-stamp → return
 //
-// Self-contained (no kwikbio-* imports). Talks to the live ARS gateway when
-// reachable, else assembles a deterministic mock so the UI works off-Jewel.
+// Self-contained (no kwikbio-* imports). Reads live data from the ARS engine
+// (jjlancaster/ars-fs, via engine.ts) for seeded subjects; falls back to a
+// deterministic mock for not-yet-seeded subjects and off-Jewel dev.
 
 import { DEFAULT_ANON_LEVEL, planForLevel } from "./levels";
+import { fetchEngineSnapshot } from "./engine";
 import type {
   EdgeKind,
   Level,
@@ -18,15 +20,27 @@ import type {
   RelationshipStatus,
 } from "./types";
 
-const ARS_GATEWAY = process.env.ARS_GATEWAY_URL ?? "http://localhost:5000";
-const GATEWAY_TIMEOUT_MS = 5_000;
+// Subjects with a live SSKM seed in the engine today (Hydro: MPN/PV seeded).
+// Others resolve to mock until their Neo4j/SSKM seed lands (D0).
+const ENGINE_SUBJECTS = new Set(["rbc-mpn-pv"]);
 
-/** P0 gate — provenance is only "available" once gs_nodes/gs_edges exist on Jewel. */
-function graphAvailable(): boolean {
-  return process.env.GRAPH_AVAILABLE === "true";
+interface RawEdge {
+  source: string;
+  target: string;
+  relation: string;
+  confidence: number;
+}
+interface RawSnapshot {
+  subject: string;
+  confidence: number;
+  objects: QMObject[];
+  edges: RawEdge[];
+  routes: QMRoute[];
+  provenanceAvailable: boolean;
+  source: "gateway" | "mock";
 }
 
-// ─── Mock knowledge seed (layer-tagged), used when the gateway is unreachable ─
+// ─── Mock seed (layer-tagged), used off-Jewel / for unseeded subjects ────────
 interface SeedObject {
   label: string;
   role: QMObject["role"];
@@ -34,16 +48,10 @@ interface SeedObject {
   definition: string;
   layer: number;
 }
-interface SeedEdge {
-  source: string;
-  target: string;
-  relation: string;
-  confidence: number;
-}
 interface Seed {
   subject: string;
   objects: SeedObject[];
-  edges: SeedEdge[];
+  edges: RawEdge[];
   routes?: QMRoute[];
 }
 
@@ -71,23 +79,6 @@ const SEEDS: Record<string, Seed> = {
   },
 };
 
-/** Derive generic routes when a seed has none (keeps the Navigation Computer populated). */
-function deriveRoutes(seed: Seed): QMRoute[] {
-  const strategies = seed.objects
-    .filter((o) => o.role !== "goal")
-    .slice(0, 4)
-    .map((o, i) => ({
-      id: String.fromCharCode(65 + i),
-      strategy: `Target ${o.label}`,
-      successProbability: Math.round(o.confidence * 100) / 100,
-      timeMonths: 6 + i * 6,
-      costTier: ((i % 4) + 1) as 1 | 2 | 3 | 4,
-      risk: (o.confidence > 0.7 ? "low" : o.confidence > 0.5 ? "med" : "high") as QMRoute["risk"],
-      evidenceStrength: Math.round(o.confidence * 100) / 100,
-    }));
-  return strategies.length ? strategies : [];
-}
-
 function subjectKey(subject: string | undefined): string {
   if (!subject) return "rbc-mpn-pv";
   return subject.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
@@ -104,10 +95,25 @@ function fallbackSeed(subject: string): Seed {
   };
 }
 
+function deriveRoutes(objects: QMObject[]): QMRoute[] {
+  return objects
+    .filter((o) => o.role !== "goal")
+    .slice(0, 4)
+    .map((o, i) => ({
+      id: String.fromCharCode(65 + i),
+      strategy: `Target ${o.label}`,
+      successProbability: Math.round(o.confidence * 100) / 100,
+      timeMonths: 6 + i * 6,
+      costTier: ((i % 4) + 1) as 1 | 2 | 3 | 4,
+      risk: (o.confidence > 0.7 ? "low" : o.confidence > 0.5 ? "med" : "high") as QMRoute["risk"],
+      evidenceStrength: Math.round(o.confidence * 100) / 100,
+    }));
+}
+
 // ─── Provenance stamping (honest — never fabricate a chain) ──────────────────
-function stampEdge(e: SeedEdge, avail: ProvenanceAvailability): QMEdge {
-  const status: RelationshipStatus = "candidate"; // runtime edges start as candidate
-  const edgeKind: EdgeKind = "influence"; // never "causal" until validated (Rule 4)
+function stampEdge(e: RawEdge, avail: ProvenanceAvailability): QMEdge {
+  const status: RelationshipStatus = "candidate";
+  const edgeKind: EdgeKind = "influence";
   const provenance: ProvenanceEntry[] =
     avail === "available"
       ? [
@@ -115,38 +121,41 @@ function stampEdge(e: SeedEdge, avail: ProvenanceAvailability): QMEdge {
             id: `prov-${e.source}-${e.target}`,
             sourceType: "reduction",
             createdAt: new Date().toISOString(),
-            createdBy: "ars-query",
+            createdBy: "ars-engine",
             confidence: e.confidence,
-            sourceRefs: ["sskm:reduction"],
-            note: "reduction-derived candidate edge",
+            sourceRefs: ["ars-engine:sskm"],
+            note: "SSKM reduction edge; full chain via /api/graph/provenance",
           },
         ]
       : []; // provenance dark → no fabricated entries
   return { source: e.source, target: e.target, relation: e.relation, edgeKind, status, confidence: e.confidence, provenance };
 }
 
-async function tryGateway(query: string, subject: string): Promise<Seed | null> {
-  try {
-    const ctrl = new AbortController();
-    const tid = setTimeout(() => ctrl.abort(), GATEWAY_TIMEOUT_MS);
-    const res = await fetch(`${ARS_GATEWAY}/v1/query`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ query, subject }),
-      signal: ctrl.signal,
-    });
-    clearTimeout(tid);
-    if (!res.ok) return null;
-    const data = (await res.json()) as {
-      subject?: string;
-      objects?: SeedObject[];
-      edges?: SeedEdge[];
-    };
-    if (!data.objects) return null;
-    return { subject: data.subject ?? subject, objects: data.objects, edges: data.edges ?? [] };
-  } catch {
-    return null; // unreachable / non-JSON stream → mock
+async function gatherRaw(subject: string, key: string): Promise<RawSnapshot> {
+  if (ENGINE_SUBJECTS.has(key)) {
+    const snap = await fetchEngineSnapshot(subject);
+    if (snap) {
+      return {
+        subject: snap.subject,
+        confidence: snap.confidence,
+        objects: snap.objects,
+        edges: snap.edges.map((e) => ({ source: e.source, target: e.target, relation: e.relation, confidence: e.confidence })),
+        routes: snap.routes,
+        provenanceAvailable: snap.provenanceAvailable,
+        source: "gateway",
+      };
+    }
   }
+  const seed = SEEDS[key] ?? fallbackSeed(subject);
+  return {
+    subject: seed.subject,
+    confidence: seed.objects.length ? Math.max(...seed.objects.map((o) => o.confidence)) : 0,
+    objects: seed.objects,
+    edges: seed.edges,
+    routes: seed.routes ?? deriveRoutes(seed.objects),
+    provenanceAvailable: false,
+    source: "mock",
+  };
 }
 
 /** Resolve a research query into a Level-bounded, provenance-honest response. */
@@ -156,56 +165,43 @@ export async function resolveQuery(req: QueryManagerRequest): Promise<QueryManag
   const plan = planForLevel(level);
   const subject = req.subject ?? "RBC / MPN / PV";
   const requested = req.requested ?? ["objects", "prism9", "provenance"];
+  const key = subjectKey(subject);
   const planNotes: string[] = [`level=${level} layer≤${plan.layerMax}`];
 
-  // 2/3/4. Plan + route + execute
-  const key = subjectKey(subject);
-  let source: QueryManagerResponse["source"] = "gateway";
-  let seed = await tryGateway(req.query, subject);
-  if (!seed) {
-    source = "mock";
-    seed = SEEDS[key] ?? fallbackSeed(subject);
-    planNotes.push("gateway unreachable → mock seed");
-  }
+  // 2/3/4. Plan + route + execute (engine, else mock)
+  const raw = await gatherRaw(subject, key);
+  planNotes.push(raw.source === "gateway" ? "live ARS engine" : "engine unreachable/unseeded → mock");
 
   // 5. Assemble — Level layer bound + plan cost ceiling.
-  const objects: QMObject[] = seed.objects
+  const objects: QMObject[] = raw.objects
     .filter((o) => o.layer <= plan.layerMax)
-    .slice(0, plan.maxObjects)
-    .map((o) => ({ ...o }));
+    .slice(0, plan.maxObjects);
   const keepLabels = new Set(objects.map((o) => o.label));
 
   // 6. Provenance-stamp (honest flag).
-  const availability: ProvenanceAvailability = graphAvailable() ? "available" : "unavailable";
-  if (availability === "unavailable") planNotes.push("GRAPH_AVAILABLE=false → provenance:unavailable");
+  const availability: ProvenanceAvailability = raw.provenanceAvailable ? "available" : "unavailable";
+  if (availability === "unavailable") planNotes.push("provenance graph down → provenance:unavailable");
 
-  const edges: QMEdge[] = seed.edges
+  const edges: QMEdge[] = raw.edges
     .filter((e) => keepLabels.has(e.source) && keepLabels.has(e.target))
     .slice(0, plan.maxEdges)
     .map((e) => stampEdge(e, availability));
 
-  const floor = req.confidenceFloor ?? 0.5;
-  const kept = objects.filter((o) => o.confidence >= floor);
-  const confidence = kept.length ? Math.max(...kept.map((o) => o.confidence)) : (objects[0]?.confidence ?? 0);
-
   // 7. Return
   const response: QueryManagerResponse = {
-    subject: seed.subject,
-    confidence,
+    subject: raw.subject,
+    confidence: raw.confidence,
     level,
     layerBound: plan.layerMax,
     objects,
     edges,
     provenance: availability,
     planNotes,
-    source,
+    source: raw.source,
   };
   if (requested.includes("lope") && plan.includeLope) response.lope = [];
   if (requested.includes("prism9")) response.prism9Graph = { nodes: objects.length, edges: edges.length };
-
-  // Navigation Computer routes — Beginner sees a shortened list.
-  const allRoutes = seed.routes && seed.routes.length ? seed.routes : deriveRoutes(seed);
-  response.routes = level === "beginner" ? allRoutes.slice(0, 3) : allRoutes;
+  response.routes = level === "beginner" ? raw.routes.slice(0, 3) : raw.routes;
 
   return response;
 }
