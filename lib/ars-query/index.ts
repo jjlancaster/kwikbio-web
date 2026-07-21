@@ -13,3 +13,5 @@ export {
 } from "./provenance";
 export type { TransitionRequest, TransitionResult } from "./provenance";
 export { resolveQuery } from "./resolve";
+export { fetchEngineSnapshot } from "./engine";
+export type { EngineSnapshot } from "./engine";
