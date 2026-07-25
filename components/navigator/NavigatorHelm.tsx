@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { GoalMode, Level, QueryManagerResponse } from "@/lib/ars-query";
+import { useLevel } from "@/components/LevelProvider";
 import MissionControl from "./MissionControl";
 import NavigationComputer from "./NavigationComputer";
 import GraphRadar from "./GraphRadar";
@@ -25,7 +26,9 @@ const LEVELS: { value: Level; label: string; dot: string }[] = [
 // Driven entirely by /api/ars-query/resolve (the Query Manager).
 export default function NavigatorHelm() {
   const [subject, setSubject] = useState<string>(SUBJECTS[0]);
-  const [level, setLevel] = useState<Level>("beginner");
+  // Level is the app-wide, persisted badge state (shared with the Nav) — one
+  // source of truth for depth (spec §5 binding rule), not local to this helm.
+  const { level, setLevel } = useLevel();
   const [goalMode, setGoalMode] = useState<GoalMode>("fix");
   const [result, setResult] = useState<QueryManagerResponse | null>(null);
   const [loading, setLoading] = useState(false);
