@@ -1,4 +1,5 @@
 import Link from "next/link";
+import LevelBadge from "./LevelBadge";
 
 export default function Nav() {
   return (
@@ -9,18 +10,23 @@ export default function Nav() {
         </Link>
         <nav className="hidden md:flex gap-6 text-sm text-slate-300">
           <Link href="/navigator" className="hover:text-bio-teal transition-colors">Navigator</Link>
+          <Link href="/navigate" className="hover:text-bio-teal transition-colors">Flight</Link>
           <Link href="/research" className="hover:text-bio-teal transition-colors">Research</Link>
           <Link href="/marketplace" className="hover:text-bio-teal transition-colors">CRO Market</Link>
           <Link href="/scicrush" className="hover:text-bio-teal transition-colors">SciCrush</Link>
           <Link href="/pricing" className="hover:text-bio-teal transition-colors">Pricing</Link>
           <Link href="/welcome" className="hover:text-bio-teal transition-colors">About</Link>
         </nav>
-        <Link
-          href="/pricing"
-          className="text-sm bg-bio-teal text-bio-navy font-semibold px-4 py-2 rounded-md hover:opacity-90 transition-opacity"
-        >
-          Start Free
-        </Link>
+        <div className="flex items-center gap-4">
+          {/* Level badge — persistent, one-tap depth control (spec §5). */}
+          <LevelBadge />
+          <Link
+            href="/pricing"
+            className="text-sm bg-bio-teal text-bio-navy font-semibold px-4 py-2 rounded-md hover:opacity-90 transition-opacity"
+          >
+            Start Free
+          </Link>
+        </div>
       </div>
     </header>
   );
