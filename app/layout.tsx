@@ -2,6 +2,7 @@ import type { Metadata } from "next";
   import "./globals.css";
   import Nav from "@/components/Nav";
   import Footer from "@/components/Footer";
+  import { LevelProvider } from "@/components/LevelContext";
 
   export const metadata: Metadata = {
     title: "kwiKBio — The Fastest Path from Research Question to Breakthrough",
@@ -13,9 +14,11 @@ import type { Metadata } from "next";
     return (
       <html lang="en">
         <body className="min-h-screen flex flex-col">
-          <Nav />
-          <main className="flex-1">{children}</main>
-          <Footer />
+          <LevelProvider>
+            <Nav />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </LevelProvider>
         </body>
       </html>
     );
