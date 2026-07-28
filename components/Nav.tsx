@@ -10,6 +10,7 @@ export default function Nav() {
         </Link>
         <nav className="hidden md:flex gap-6 text-sm text-slate-300">
           <Link href="/navigator" className="hover:text-bio-teal transition-colors">Navigator</Link>
+          <Link href="/navigate" className="hover:text-bio-teal transition-colors">Flight</Link>
           <Link href="/research" className="hover:text-bio-teal transition-colors">Research</Link>
           <Link href="/marketplace" className="hover:text-bio-teal transition-colors">CRO Market</Link>
           <Link href="/scicrush" className="hover:text-bio-teal transition-colors">SciCrush</Link>
