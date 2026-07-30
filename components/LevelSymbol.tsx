@@ -1,14 +1,16 @@
 import type { Level } from "@/lib/ars-query";
 
 // Level difficulty markers follow international ski-trail marking, reused for the
-// CAST / UDL adaptive-learning level system:
+// CAST / UDL adaptive-learning level system. Each marker sits on its own WHITE
+// SIGN panel (like real trail signage), so the shape reads correctly on any
+// background — in particular the black diamond is genuinely black-on-white
+// rather than an outline on the dark app shell:
 //   green circle  → Easy      (easiest)
 //   blue square   → Novice    (intermediate)
 //   black diamond → Pro       (advanced)
 //   double black  → (future)  (expert — anticipated, not yet a live Level)
 //
-// Shape AND colour both encode difficulty, so the level is legible without
-// relying on colour alone (accessibility, and it survives greyscale/print).
+// Shape AND colour both encode difficulty (accessibility; survives greyscale).
 export type LevelShape = "circle" | "square" | "diamond" | "double-diamond";
 
 export interface LevelMeta {
@@ -47,19 +49,15 @@ export const LEVEL_META: readonly LevelMeta[] = [
 ];
 
 const SHAPE_FILL: Record<LevelShape, string> = {
-  circle: "#22c55e", // green — easiest
-  square: "#3b82f6", // blue — intermediate
+  circle: "#16a34a", // green — easiest
+  square: "#2563eb", // blue — intermediate
   diamond: "#0b0b0b", // black — advanced
   "double-diamond": "#0b0b0b", // black — expert (future)
 };
 
-// Light outline keeps the black diamond legible on dark backgrounds (the app
-// shell is bio-navy); it reads as a plain black diamond on light surfaces too.
-const OUTLINE = "rgba(226,232,240,0.85)";
-
 export function LevelSymbol({
   shape,
-  size = 14,
+  size = 15,
   className = "",
 }: {
   shape: LevelShape;
@@ -76,46 +74,52 @@ export function LevelSymbol({
       aria-hidden="true"
       focusable="false"
     >
-      {shape === "circle" && <circle cx="8" cy="8" r="6" fill={fill} />}
+      {/* White sign panel — the marker always sits on white, so a black diamond
+          is truly black-on-white on any background. */}
+      <rect
+        x="0.5"
+        y="0.5"
+        width="15"
+        height="15"
+        rx="3"
+        fill="#ffffff"
+        stroke="rgba(15,23,42,0.25)"
+        strokeWidth="0.75"
+      />
+      {shape === "circle" && <circle cx="8" cy="8" r="4.3" fill={fill} />}
       {shape === "square" && (
-        <rect x="2.5" y="2.5" width="11" height="11" rx="1.5" fill={fill} />
+        <rect x="4" y="4" width="8" height="8" rx="1" fill={fill} />
       )}
       {shape === "diamond" && (
         <rect
-          x="3.5"
-          y="3.5"
-          width="9"
-          height="9"
-          rx="1"
+          x="4.75"
+          y="4.75"
+          width="6.5"
+          height="6.5"
+          rx="0.6"
           fill={fill}
-          stroke={OUTLINE}
-          strokeWidth="1"
           transform="rotate(45 8 8)"
         />
       )}
       {shape === "double-diamond" && (
         <>
           <rect
-            x="1"
-            y="4"
-            width="7"
-            height="7"
-            rx="0.8"
+            x="2.5"
+            y="5.5"
+            width="5"
+            height="5"
+            rx="0.5"
             fill={fill}
-            stroke={OUTLINE}
-            strokeWidth="1"
-            transform="rotate(45 4.5 7.5)"
+            transform="rotate(45 5 8)"
           />
           <rect
-            x="8"
-            y="4"
-            width="7"
-            height="7"
-            rx="0.8"
+            x="8.5"
+            y="5.5"
+            width="5"
+            height="5"
+            rx="0.5"
             fill={fill}
-            stroke={OUTLINE}
-            strokeWidth="1"
-            transform="rotate(45 11.5 7.5)"
+            transform="rotate(45 11 8)"
           />
         </>
       )}
