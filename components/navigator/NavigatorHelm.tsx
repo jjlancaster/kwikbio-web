@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { GoalMode, Level, QueryManagerResponse } from "@/lib/ars-query";
+import type { GoalMode, QueryManagerResponse } from "@/lib/ars-query";
 import { useLevel } from "@/components/LevelContext";
+import LevelBadge from "@/components/LevelBadge";
 import MissionControl from "./MissionControl";
 import NavigationComputer from "./NavigationComputer";
 import GraphRadar from "./GraphRadar";
@@ -16,19 +17,13 @@ const SUBJECTS = [
   "Cancer",
 ] as const;
 
-const LEVELS: { value: Level; label: string; dot: string }[] = [
-  { value: "beginner", label: "Beginner", dot: "bg-emerald-400" },
-  { value: "novice", label: "Novice", dot: "bg-amber-400" },
-  { value: "pro", label: "Pro", dot: "bg-sky-400" },
-];
-
 // The TREE Navigation Helm — v4.2-feasible panels, Level-governed.
 // Driven entirely by /api/ars-query/resolve (the Query Manager).
 export default function NavigatorHelm() {
   const [subject, setSubject] = useState<string>(SUBJECTS[0]);
   // Level is the app-wide persistent control (shared with the nav badge), so the
   // helm selector and the global badge stay in sync and survive navigation.
-  const { level, setLevel } = useLevel();
+  const { level } = useLevel();
   const [goalMode, setGoalMode] = useState<GoalMode>("fix");
   const [result, setResult] = useState<QueryManagerResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -89,21 +84,10 @@ export default function NavigatorHelm() {
             </select>
           </label>
 
-          {/* Level selector — governs graph depth AND panel density */}
-          <div className="flex overflow-hidden rounded-md border border-white/10">
-            {LEVELS.map((l) => (
-              <button
-                key={l.value}
-                onClick={() => setLevel(l.value)}
-                className={`flex items-center gap-1.5 px-3 py-1 text-sm transition ${
-                  level === l.value ? "bg-bio-purple text-white" : "bg-transparent text-slate-400 hover:text-white"
-                }`}
-              >
-                <span className={`h-2 w-2 rounded-full ${l.dot}`} />
-                {l.label}
-              </button>
-            ))}
-          </div>
+          {/* Level selector — governs graph depth AND panel density. Shared
+              LevelBadge (ski-trail markers), bound to the app-wide Level so the
+              helm and the global nav badge stay in sync. */}
+          <LevelBadge />
         </div>
       </header>
 

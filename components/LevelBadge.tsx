@@ -1,33 +1,17 @@
 "use client";
 
-// The persistent Level badge (U1). One-tap Beginner / Novice / Pro. Sets the
-// app-wide Level (LevelContext) that every /api/ars-query/resolve call sends as
-// `level` — the Query Manager binds it to an OntologyLayer depth at plan time
-// (spec §3.4). Dot colors match the Navigator helm: 🟢 / 🟡 / 🔵.
+// The persistent Level badge (U1). ALL THREE markers show at all times — one
+// active, the other two as alternative paths forward (one tap to switch). The
+// active Level is the app-wide LevelContext value that every
+// /api/ars-query/resolve call sends as `level`; the Query Manager binds it to an
+// OntologyLayer depth at plan time (spec §3.4). Changing level shifts the depth
+// of analysis and the research pathways available.
+//
+// Markers follow international ski-trail difficulty (green circle · blue square
+// · black diamond), the CAST/UDL adaptive-learning convention.
 
-import type { Level } from "@/lib/ars-query";
+import { LEVEL_META, LevelSymbol } from "./LevelSymbol";
 import { useLevel } from "./LevelContext";
-
-const LEVELS: { value: Level; label: string; dot: string; hint: string }[] = [
-  {
-    value: "beginner",
-    label: "Beginner",
-    dot: "bg-emerald-400",
-    hint: "Layers 0–1 · plain-language, shallow graph",
-  },
-  {
-    value: "novice",
-    label: "Novice",
-    dot: "bg-amber-400",
-    hint: "Layers 0–3 · terminology + confidence",
-  },
-  {
-    value: "pro",
-    label: "Pro",
-    dot: "bg-sky-400",
-    hint: "Layers 0–5 · full depth, provenance, LOPE/SSKM",
-  },
-];
 
 export default function LevelBadge({ compact = false }: { compact?: boolean }) {
   const { level, setLevel } = useLevel();
@@ -35,10 +19,10 @@ export default function LevelBadge({ compact = false }: { compact?: boolean }) {
     <div
       role="radiogroup"
       aria-label="Research Level"
-      title="Level sets the graph depth the Query Manager plans (spec §3.4)"
-      className="flex overflow-hidden rounded-md border border-white/10"
+      title="Level sets research depth and available pathways (spec §3.4)"
+      className="flex items-center overflow-hidden rounded-md border border-white/10"
     >
-      {LEVELS.map((l) => {
+      {LEVEL_META.map((l) => {
         const active = level === l.value;
         return (
           <button
@@ -50,14 +34,16 @@ export default function LevelBadge({ compact = false }: { compact?: boolean }) {
             onClick={() => setLevel(l.value)}
             title={l.hint}
             className={`flex items-center gap-1.5 transition ${
-              compact ? "px-2 py-1 text-xs" : "px-3 py-1 text-sm"
+              compact ? "px-2 py-1 text-xs" : "px-3 py-1.5 text-sm"
             } ${
               active
                 ? "bg-bio-purple text-white"
-                : "bg-transparent text-slate-400 hover:text-white"
+                : "text-slate-400 hover:bg-white/5 hover:text-white"
             }`}
           >
-            <span className={`h-2 w-2 shrink-0 rounded-full ${l.dot}`} />
+            {/* Symbol always at full colour so the marker stays recognizable
+                even for the inactive (alternative-path) levels. */}
+            <LevelSymbol shape={l.shape} />
             <span className={compact ? "hidden sm:inline" : ""}>{l.label}</span>
           </button>
         );
