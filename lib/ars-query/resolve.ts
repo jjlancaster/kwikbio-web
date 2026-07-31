@@ -243,7 +243,11 @@ function stampEdge(e: RawEdge, avail: ProvenanceAvailability): QMEdge {
 async function gatherRaw(subject: string, key: string): Promise<RawSnapshot> {
   if (ENGINE_SUBJECTS.has(key)) {
     const snap = await fetchEngineSnapshot(subject);
-    if (snap) {
+    // Guard: only use engine data when it actually has real confidence values.
+    // An empty/fresh SSKM (all confidence=0) is indistinguishable from a seeded
+    // subject to the engine adapter, but useless to the Navigator. Fall through
+    // to the seed so the user sees rich, accurate content instead of empty panels.
+    if (snap && snap.confidence > 0) {
       return {
         subject: snap.subject,
         confidence: snap.confidence,
