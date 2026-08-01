@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/db/supabase";
+import { query } from "@/lib/db/pg";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -8,18 +8,23 @@ export async function GET(req: NextRequest) {
   const verifiedOnly = searchParams.get("verified") === "true";
   const limit = Math.min(parseInt(searchParams.get("limit") ?? "50", 10), 200);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query = (supabase as any)
-    .from("vendors")
-    .select("id, name, slug, specializations, trust_score, is_verified, avg_turnaround_days, kbkg_node_id, created_at")
-    .order("trust_score", { ascending: false })
-    .limit(limit);
+  const conds: string[] = ["is_active = TRUE"];
+  const vals: unknown[] = [];
+  let i = 1;
+  if (verifiedOnly) { conds.push("is_verified = TRUE"); }
+  if (specialization) { conds.push(`$${i++} = ANY(specializations)`); vals.push(specialization); }
+  if (search) { conds.push(`(name ILIKE $${i} OR slug ILIKE $${i})`); vals.push(`%${search}%`); i++; }
+  vals.push(limit);
 
-  if (verifiedOnly) query = query.eq("is_verified", true);
-  if (specialization) query = query.contains("specializations", [specialization]);
-  if (search) query = query.or(`name.ilike.%${search}%,slug.ilike.%${search}%`);
+  const sql = `SELECT id, name, slug, specializations, trust_score, is_verified,
+      avg_turnaround_days, kbkg_node_id, created_at
+    FROM vendors WHERE ${conds.join(' AND ')}
+    ORDER BY trust_score DESC NULLS LAST LIMIT $${i}`;
 
-  const { data, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ vendors: data ?? [] });
+  try {
+    const rows = await query(sql, vals);
+    return NextResponse.json({ vendors: rows });
+  } catch (err) {
+    return NextResponse.json({ error: String(err) }, { status: 500 });
+  }
 }
