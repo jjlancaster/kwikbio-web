@@ -1,23 +1,6 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+// DEPRECATED — Supabase removed 2026-08-01.
+// All DB access now goes through lib/db/pg.ts (local Postgres on Jewel).
+// This stub exists only to prevent any lingering import from breaking the build.
 
-const url  = process.env.SUPABASE_URL ?? '';
-const key  = process.env.SUPABASE_SERVICE_KEY ?? process.env.SUPABASE_ANON_KEY ?? '';
-
-if (!url || !key) {
-  console.warn('[supabase] SUPABASE_URL / SUPABASE_SERVICE_KEY not set — DB calls will fail');
-}
-
-let _client: SupabaseClient | null = null;
-
-export function getSupabase(): SupabaseClient {
-  if (!_client) {
-    _client = createClient(url, key, { auth: { persistSession: false } });
-  }
-  return _client;
-}
-
-export const supabase = new Proxy({} as SupabaseClient, {
-  get(_target, prop) {
-    return (getSupabase() as unknown as Record<string, unknown>)[prop as string];
-  },
-});
+export const supabase = null;
+export function getSupabase() { throw new Error("Supabase removed — use lib/db/pg.ts"); }

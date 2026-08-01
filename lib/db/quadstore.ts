@@ -1,72 +1,66 @@
-import { getSupabase } from './supabase';
+import pool from './pg';
 import type { RDFQuad } from '../types';
 
 function toRow(q: RDFQuad) {
-  return {
-    subject:    q.subject,
-    predicate:  q.predicate,
-    object:     q.object,
-    graph_name: q.graphName ?? 'public',
-    metadata:   q.metadata ?? null,
-  };
-}
-
-function fromRow(r: Record<string, unknown>): RDFQuad {
-  return {
-    subject:   r.subject as string,
-    predicate: r.predicate as string,
-    object:    r.object as string,
-    graphName: r.graph_name as string,
-    metadata:  r.metadata as RDFQuad['metadata'],
-  };
+  return [q.subject, q.predicate, q.object, q.graphName ?? 'public', q.metadata ?? null];
 }
 
 export async function insertQuad(quad: RDFQuad): Promise<void> {
-  const { error } = await getSupabase().from('gs_quads').insert(toRow(quad));
-  if (error) throw new Error(`insertQuad: ${error.message}`);
+  await pool.query(
+    'INSERT INTO gs_quads (subject, predicate, object, graph_name, metadata) VALUES ($1,$2,$3,$4,$5)',
+    toRow(quad),
+  );
 }
 
 export async function insertQuads(quads: RDFQuad[]): Promise<void> {
   if (quads.length === 0) return;
-  const { error } = await getSupabase().from('gs_quads').insert(quads.map(toRow));
-  if (error) throw new Error(`insertQuads: ${error.message}`);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    for (const q of quads) {
+      await client.query(
+        'INSERT INTO gs_quads (subject, predicate, object, graph_name, metadata) VALUES ($1,$2,$3,$4,$5)',
+        toRow(q),
+      );
+    }
+    await client.query('COMMIT');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
 }
 
 export async function queryBySubject(subject: string, graphName = 'public'): Promise<RDFQuad[]> {
-  const { data, error } = await getSupabase()
-    .from('gs_quads')
-    .select('*')
-    .eq('subject', subject)
-    .eq('graph_name', graphName)
-    .order('created_at', { ascending: false });
-  if (error) throw new Error(`queryBySubject: ${error.message}`);
-  return (data ?? []).map(fromRow);
+  const { rows } = await pool.query(
+    'SELECT * FROM gs_quads WHERE subject=$1 AND graph_name=$2 ORDER BY created_at DESC',
+    [subject, graphName],
+  );
+  return rows.map((r) => ({ subject: r.subject, predicate: r.predicate, object: r.object, graphName: r.graph_name, metadata: r.metadata }));
 }
 
 export async function queryByPattern(
-  subject?: string,
-  predicate?: string,
-  object?: string,
-  graphName = 'public',
-  limit = 100,
+  subject?: string, predicate?: string, object?: string, graphName = 'public', limit = 100,
 ): Promise<RDFQuad[]> {
-  let q = getSupabase().from('gs_quads').select('*').eq('graph_name', graphName);
-  if (subject)   q = q.eq('subject', subject);
-  if (predicate) q = q.eq('predicate', predicate);
-  if (object)    q = q.eq('object', object);
-  const { data, error } = await q.order('created_at', { ascending: false }).limit(limit);
-  if (error) throw new Error(`queryByPattern: ${error.message}`);
-  return (data ?? []).map(fromRow);
+  const conds: string[] = ['graph_name=$1'];
+  const vals: unknown[] = [graphName];
+  let i = 2;
+  if (subject)   { conds.push(`subject=$${i++}`);   vals.push(subject); }
+  if (predicate) { conds.push(`predicate=$${i++}`);  vals.push(predicate); }
+  if (object)    { conds.push(`object=$${i++}`);     vals.push(object); }
+  vals.push(limit);
+  const { rows } = await pool.query(
+    `SELECT * FROM gs_quads WHERE ${conds.join(' AND ')} ORDER BY created_at DESC LIMIT $${i}`,
+    vals,
+  );
+  return rows.map((r) => ({ subject: r.subject, predicate: r.predicate, object: r.object, graphName: r.graph_name, metadata: r.metadata }));
 }
 
 export async function getNeighbours(nodeId: string, graphName = 'public'): Promise<string[]> {
-  const sb = getSupabase();
-  const [fwd, rev] = await Promise.all([
-    sb.from('gs_quads').select('object').eq('subject', nodeId).eq('graph_name', graphName),
-    sb.from('gs_quads').select('subject').eq('object', nodeId).eq('graph_name', graphName),
-  ]);
-  return [
-    ...((fwd.data ?? []).map((r: Record<string, unknown>) => r.object as string)),
-    ...((rev.data ?? []).map((r: Record<string, unknown>) => r.subject as string)),
-  ];
+  const { rows: fwd } = await pool.query(
+    'SELECT object FROM gs_quads WHERE subject=$1 AND graph_name=$2', [nodeId, graphName]);
+  const { rows: rev } = await pool.query(
+    'SELECT subject FROM gs_quads WHERE object=$1 AND graph_name=$2', [nodeId, graphName]);
+  return [...fwd.map((r) => r.object as string), ...rev.map((r) => r.subject as string)];
 }
