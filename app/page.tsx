@@ -1,6 +1,12 @@
-import { redirect } from "next/navigation";
+import Prism9Entry from "@/components/Prism9Entry";
 
-// Front door → the TREE Navigation Helm. The marketing home lives at /welcome.
+export const metadata = {
+  title: "kwiKBio — Prism9 Live Research",
+  description:
+    "Enter any biological topic, disease, gene, or concept — Prism9 builds a live causal graph across Normal, Dysfunction, Fix, and Cope dimensions.",
+};
+
+// Front door: Prism9 live keyword entry. Marketing home → /welcome; ARS Navigator → /navigator.
 export default function Home() {
-  redirect("/navigator");
+  return <Prism9Entry />;
 }

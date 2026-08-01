@@ -3,7 +3,7 @@ import PricingCard, { type Tier } from "@/components/PricingCard";
   const tiers: Tier[] = [
     { name: "Freemium", price: "$0", cadence: "/mo", limit: "5 ARS queries / month",
       features: ["Read-only knowledge-graph access", "Basic FastScience! summary", "Community support"],
-      cta: "Start Free", href: "/api/subscribe" },
+      cta: "Start Free", href: "/" },
     { name: "Explorer", price: "$9", cadence: "/mo", limit: "50 queries / month",
       features: ["Basic graph access", "PRISM-9 problem reduction", "Email support"],
       cta: "Choose Explorer", href: "/api/subscribe" },
