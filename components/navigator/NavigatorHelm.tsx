@@ -7,6 +7,7 @@ import LevelBadge from "@/components/LevelBadge";
 import MissionControl from "./MissionControl";
 import NavigationComputer from "./NavigationComputer";
 import GraphRadar from "./GraphRadar";
+import Prism9Popup from "./Prism9Popup";
 
 // The 5 disease subjects (spec §2, Hydro-confirmed).
 const SUBJECTS = [
@@ -28,6 +29,18 @@ export default function NavigatorHelm() {
   const [result, setResult] = useState<QueryManagerResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Prism9 entry flow (U2): popup cluster at Level depth → land / launch flight.
+  const [prism9Open, setPrism9Open] = useState(false);
+  const [flightNotice, setFlightNotice] = useState<string | null>(null);
+
+  const onLaunchFlight = useCallback((nodeLabel: string | null) => {
+    setPrism9Open(false);
+    setFlightNotice(
+      nodeLabel
+        ? `Landed on “${nodeLabel}”. Full 3D free-flight is Navigator Layer 1 (Three.js) — next up.`
+        : "Navigator flight — 3D Layer 1 (Three.js) is next; explore the cluster in 2D for now."
+    );
+  }, []);
 
   const run = useCallback(async () => {
     setLoading(true);
@@ -88,8 +101,32 @@ export default function NavigatorHelm() {
               LevelBadge (ski-trail markers), bound to the app-wide Level so the
               helm and the global nav badge stay in sync. */}
           <LevelBadge />
+
+          {/* Prism9 entry flow (U2): open the ResearchCluster at Level depth. */}
+          <button
+            type="button"
+            onClick={() => setPrism9Open(true)}
+            disabled={!result || (result.objects?.length ?? 0) === 0}
+            className="rounded-md border border-bio-teal/40 bg-bio-teal/10 px-3 py-1.5 text-sm font-medium text-bio-teal transition hover:bg-bio-teal/20 disabled:opacity-40"
+          >
+            ◎ Prism9 Cluster
+          </button>
         </div>
       </header>
+
+      {flightNotice && (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-md border border-bio-teal/30 bg-bio-teal/10 px-3 py-2 text-sm text-bio-teal">
+          <span>{flightNotice}</span>
+          <button
+            type="button"
+            onClick={() => setFlightNotice(null)}
+            aria-label="Dismiss"
+            className="text-bio-teal/70 hover:text-white"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {error && (
         <div className="mb-4 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">
@@ -126,6 +163,13 @@ export default function NavigatorHelm() {
           </>
         )}
       </footer>
+
+      <Prism9Popup
+        result={result}
+        open={prism9Open}
+        onClose={() => setPrism9Open(false)}
+        onLaunchFlight={onLaunchFlight}
+      />
     </div>
   );
 }
