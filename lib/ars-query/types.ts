@@ -127,6 +127,8 @@ export interface QueryManagerResponse {
   level: Level;
   /** Echoes the applied Level depth (spec §3.5). */
   layerBound: number;
+  /** Effective recenter focus (R4) — the node the graph is re-rooted on, if any. */
+  focus?: string;
   objects: QMObject[];
   edges: QMEdge[];
   /** Navigation Computer pathways (omitted/short at Beginner). */

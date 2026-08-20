@@ -32,6 +32,10 @@ export default function NavigatorHelm() {
   // Prism9 entry flow (U2): popup cluster at Level depth → land / launch flight.
   const [prism9Open, setPrism9Open] = useState(false);
   const [flightNotice, setFlightNotice] = useState<string | null>(null);
+  // Recenter (R4): re-root the cluster on a node/predicate via current_focus.
+  const [focus, setFocus] = useState<string | null>(null);
+
+  const onRecenter = useCallback((label: string | null) => setFocus(label), []);
 
   const onLaunchFlight = useCallback((nodeLabel: string | null) => {
     setPrism9Open(false);
@@ -53,6 +57,7 @@ export default function NavigatorHelm() {
           query: subject,
           subject,
           level,
+          current_focus: focus ?? undefined,
           requested: ["objects", "prism9", "lope", "provenance"],
         }),
       });
@@ -63,7 +68,7 @@ export default function NavigatorHelm() {
     } finally {
       setLoading(false);
     }
-  }, [subject, level]);
+  }, [subject, level, focus]);
 
   useEffect(() => {
     run();
@@ -86,7 +91,10 @@ export default function NavigatorHelm() {
             System
             <select
               value={subject}
-              onChange={(e) => setSubject(e.target.value)}
+              onChange={(e) => {
+                setSubject(e.target.value);
+                setFocus(null); // recenter is per-subject
+              }}
               className="ml-2 rounded-md border border-white/10 bg-white/5 px-2 py-1 text-sm text-white outline-none focus:border-bio-teal"
             >
               {SUBJECTS.map((s) => (
@@ -167,7 +175,10 @@ export default function NavigatorHelm() {
       <Prism9Popup
         result={result}
         open={prism9Open}
+        loading={loading}
+        focus={focus}
         onClose={() => setPrism9Open(false)}
+        onRecenter={onRecenter}
         onLaunchFlight={onLaunchFlight}
       />
     </div>

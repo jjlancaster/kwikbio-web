@@ -95,6 +95,63 @@ function fallbackSeed(subject: string): Seed {
   };
 }
 
+// ─── Recenter (R4): re-root the subgraph on a focus node/predicate ───────────
+// current_focus makes the chosen node the new centre (layer 0); every other
+// node is re-layered by its graph-hop distance from the focus (undirected BFS).
+// The Level bound then applies to THESE distances, so recentering on a node
+// shows its neighbourhood at the current depth (Beginner = 1 hop, Pro = up to 5).
+function recenterLayers(
+  objects: QMObject[],
+  edges: RawEdge[],
+  focusLabel: string
+): Map<string, number> {
+  const adj = new Map<string, Set<string>>();
+  const touch = (a: string) => {
+    if (!adj.has(a)) adj.set(a, new Set());
+    return adj.get(a)!;
+  };
+  for (const e of edges) {
+    touch(e.source).add(e.target);
+    touch(e.target).add(e.source);
+  }
+  const layer = new Map<string, number>([[focusLabel, 0]]);
+  const queue: string[] = [focusLabel];
+  while (queue.length) {
+    const n = queue.shift()!;
+    const d = layer.get(n)!;
+    for (const nb of adj.get(n) ?? []) {
+      if (!layer.has(nb)) {
+        layer.set(nb, d + 1);
+        queue.push(nb);
+      }
+    }
+  }
+  return layer;
+}
+
+// Resolve a caller-supplied focus (a node label, or an edge "source→target"
+// predicate) to a concrete node label present in the graph, or null.
+function resolveFocus(focus: string | undefined, objects: QMObject[], edges: RawEdge[]): string | null {
+  const f = focus?.trim();
+  if (!f) return null;
+  const byLabel = (needle: string) =>
+    objects.find((o) => o.label.toLowerCase() === needle.toLowerCase())?.label ?? null;
+  const direct = byLabel(f);
+  if (direct) return direct;
+  // Predicate form "A→B" / "A->B": recentre on the relationship's target.
+  const m = f.split(/\s*(?:->|→)\s*/);
+  if (m.length === 2) {
+    const edge = edges.find(
+      (e) =>
+        e.source.toLowerCase() === m[0].toLowerCase() &&
+        e.target.toLowerCase() === m[1].toLowerCase()
+    );
+    if (edge) return edge.target;
+    return byLabel(m[1]) ?? byLabel(m[0]);
+  }
+  return null;
+}
+
 function deriveRoutes(objects: QMObject[]): QMRoute[] {
   return objects
     .filter((o) => o.role !== "goal")
@@ -172,8 +229,18 @@ export async function resolveQuery(req: QueryManagerRequest): Promise<QueryManag
   const raw = await gatherRaw(subject, key);
   planNotes.push(raw.source === "gateway" ? "live ARS engine" : "engine unreachable/unseeded → mock");
 
+  // 4b. Recenter (R4) — if a focus is given, re-root layers on it (BFS hops).
+  let workObjects = raw.objects;
+  const focusLabel = resolveFocus(req.currentFocus, raw.objects, raw.edges);
+  if (focusLabel) {
+    const relayer = recenterLayers(raw.objects, raw.edges, focusLabel);
+    // Unreachable nodes get a layer past Pro's max so the Level bound drops them.
+    workObjects = raw.objects.map((o) => ({ ...o, layer: relayer.get(o.label) ?? plan.layerMax + 99 }));
+    planNotes.push(`recentered on "${focusLabel}"`);
+  }
+
   // 5. Assemble — Level layer bound + plan cost ceiling.
-  const objects: QMObject[] = raw.objects
+  const objects: QMObject[] = workObjects
     .filter((o) => o.layer <= plan.layerMax)
     .slice(0, plan.maxObjects);
   const keepLabels = new Set(objects.map((o) => o.label));
@@ -199,6 +266,7 @@ export async function resolveQuery(req: QueryManagerRequest): Promise<QueryManag
     planNotes,
     source: raw.source,
   };
+  if (focusLabel) response.focus = focusLabel;
   if (requested.includes("lope") && plan.includeLope) response.lope = [];
   if (requested.includes("prism9")) response.prism9Graph = { nodes: objects.length, edges: edges.length };
   response.routes = level === "beginner" ? raw.routes.slice(0, 3) : raw.routes;

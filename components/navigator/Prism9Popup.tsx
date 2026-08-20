@@ -34,12 +34,18 @@ const CENTER = SIZE / 2;
 export default function Prism9Popup({
   result,
   open,
+  loading = false,
+  focus = null,
   onClose,
+  onRecenter,
   onLaunchFlight,
 }: {
   result: QueryManagerResponse | null;
   open: boolean;
+  loading?: boolean;
+  focus?: string | null;
   onClose: () => void;
+  onRecenter: (label: string | null) => void;
   onLaunchFlight: (nodeLabel: string | null) => void;
 }) {
   const [selected, setSelected] = useState<string | null>(null);
@@ -49,12 +55,21 @@ export default function Prism9Popup({
   const objects = useMemo(() => result?.objects ?? [], [result]);
   const edges = result?.edges ?? [];
 
-  // Radial layout: subject at centre; objects on rings by OntologyLayer.
+  // The centre of the cluster: the recenter focus if set (R4), else the subject.
+  // result.focus is the server-resolved effective focus (handles predicates).
+  const centerLabel = result?.focus ?? result?.subject ?? "";
+  // Nodes to place on rings = everything except the centre node.
+  const ringObjects = useMemo(
+    () => objects.filter((o) => o.label !== centerLabel),
+    [objects, centerLabel]
+  );
+
+  // Radial layout: centre node at middle; the rest on rings by OntologyLayer.
   const pos = useMemo(() => {
     const m = new Map<string, Pt>();
-    if (result) m.set(result.subject, { x: CENTER, y: CENTER });
-    objects.forEach((o, i) => {
-      const angle = (i / Math.max(objects.length, 1)) * Math.PI * 2 - Math.PI / 2;
+    if (centerLabel) m.set(centerLabel, { x: CENTER, y: CENTER });
+    ringObjects.forEach((o, i) => {
+      const angle = (i / Math.max(ringObjects.length, 1)) * Math.PI * 2 - Math.PI / 2;
       const radius = 70 + Math.min(o.layer, 5) * 34;
       m.set(o.label, {
         x: CENTER + radius * Math.cos(angle),
@@ -62,7 +77,7 @@ export default function Prism9Popup({
       });
     });
     return m;
-  }, [result, objects]);
+  }, [centerLabel, ringObjects]);
 
   const selectedObj = objects.find((o) => o.label === selected) ?? null;
 
@@ -74,21 +89,21 @@ export default function Prism9Popup({
 
   // Guided slalom (Mode 2), 2D: auto-advance the landing through the cluster.
   useEffect(() => {
-    if (!touring || objects.length === 0) return;
+    if (!touring || ringObjects.length === 0) return;
     let i = 0;
-    setSelected(objects[0].label);
+    setSelected(ringObjects[0].label);
     tourRef.current = window.setInterval(() => {
       i += 1;
-      if (i >= objects.length) {
+      if (i >= ringObjects.length) {
         setTouring(false);
         return;
       }
-      setSelected(objects[i].label);
+      setSelected(ringObjects[i].label);
     }, 1600);
     return () => {
       if (tourRef.current) window.clearInterval(tourRef.current);
     };
-  }, [touring, objects]);
+  }, [touring, ringObjects]);
 
   // Reset transient state whenever the popup closes.
   useEffect(() => {
@@ -141,6 +156,20 @@ export default function Prism9Popup({
                 {levelMeta.label} · layer ≤ {result?.layerBound}
               </span>
             )}
+            {/* Recenter (R4): show the active focus + a one-tap reset. */}
+            {result?.focus && (
+              <button
+                type="button"
+                onClick={() => onRecenter(null)}
+                title="Reset to the subject"
+                className="flex items-center gap-1 rounded-md border border-bio-teal/40 bg-bio-teal/10 px-2 py-0.5 text-xs text-bio-teal hover:bg-bio-teal/20"
+              >
+                ⌖ centered on {result.focus} · reset ✕
+              </button>
+            )}
+            {loading && (
+              <span className="text-xs text-slate-500" aria-live="polite">recentering…</span>
+            )}
           </div>
           <button
             type="button"
@@ -186,7 +215,7 @@ export default function Prism9Popup({
                     />
                   ))}
 
-                  {/* edges */}
+                  {/* edges — click a predicate to recenter on that relationship */}
                   {edges.map((e, i) => {
                     const a = pos.get(e.source);
                     const b = pos.get(e.target);
@@ -194,38 +223,58 @@ export default function Prism9Popup({
                     const dim =
                       selected && e.source !== selected && e.target !== selected;
                     return (
-                      <line
+                      <g
                         key={i}
-                        x1={a.x}
-                        y1={a.y}
-                        x2={b.x}
-                        y2={b.y}
-                        stroke={
-                          e.edgeKind === "causal"
-                            ? "rgba(0,212,200,0.55)"
-                            : "rgba(255,255,255,0.18)"
-                        }
-                        strokeDasharray={e.edgeKind === "causal" ? undefined : "3 3"}
-                        opacity={dim ? 0.15 : 1}
-                      />
+                        role="button"
+                        aria-label={`Recenter on ${e.source} ${e.relation} ${e.target}`}
+                        tabIndex={0}
+                        style={{ cursor: "pointer" }}
+                        onClick={() => onRecenter(`${e.source}→${e.target}`)}
+                        onKeyDown={(ev) => {
+                          if (ev.key === "Enter" || ev.key === " ")
+                            onRecenter(`${e.source}→${e.target}`);
+                        }}
+                      >
+                        {/* wide invisible hit target */}
+                        <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="transparent" strokeWidth={10} />
+                        <line
+                          x1={a.x}
+                          y1={a.y}
+                          x2={b.x}
+                          y2={b.y}
+                          stroke={
+                            e.edgeKind === "causal"
+                              ? "rgba(0,212,200,0.55)"
+                              : "rgba(255,255,255,0.18)"
+                          }
+                          strokeDasharray={e.edgeKind === "causal" ? undefined : "3 3"}
+                          opacity={dim ? 0.15 : 1}
+                        />
+                      </g>
                     );
                   })}
 
-                  {/* subject core */}
-                  {result && (() => {
-                    const p = pos.get(result.subject)!;
+                  {/* centre node (subject, or the recenter focus) */}
+                  {centerLabel && pos.get(centerLabel) && (() => {
+                    const p = pos.get(centerLabel)!;
+                    const isFocus = !!result?.focus;
                     return (
-                      <g>
-                        <circle cx={p.x} cy={p.y} r={18} fill="#4a1d8e" stroke="#f5c842" strokeWidth={1.5} />
+                      <g
+                        role={isFocus ? "button" : undefined}
+                        style={isFocus ? { cursor: "pointer" } : undefined}
+                        onClick={isFocus ? () => onRecenter(null) : undefined}
+                        aria-label={isFocus ? "Reset center to subject" : undefined}
+                      >
+                        <circle cx={p.x} cy={p.y} r={18} fill="#4a1d8e" stroke={isFocus ? "#00d4c8" : "#f5c842"} strokeWidth={1.5} />
                         <text x={p.x} y={p.y + 32} textAnchor="middle" className="fill-white" style={{ fontSize: 10 }}>
-                          {result.subject.length > 22 ? result.subject.slice(0, 21) + "…" : result.subject}
+                          {centerLabel.length > 22 ? centerLabel.slice(0, 21) + "…" : centerLabel}
                         </text>
                       </g>
                     );
                   })()}
 
-                  {/* object nodes — click to land */}
-                  {objects.map((o) => {
+                  {/* object nodes — click to land, double-click to recenter */}
+                  {ringObjects.map((o) => {
                     const p = pos.get(o.label);
                     if (!p) return null;
                     const isSel = o.label === selected;
@@ -234,12 +283,16 @@ export default function Prism9Popup({
                       <g
                         key={o.label}
                         role="button"
-                        aria-label={`Land on ${o.label}`}
+                        aria-label={`Land on ${o.label} (double-click to recenter)`}
                         tabIndex={0}
                         style={{ cursor: "pointer" }}
                         onClick={() => {
                           setTouring(false);
                           setSelected(isSel ? null : o.label);
+                        }}
+                        onDoubleClick={() => {
+                          setTouring(false);
+                          onRecenter(o.label);
                         }}
                         onKeyDown={(ev) => {
                           if (ev.key === "Enter" || ev.key === " ") {
@@ -294,8 +347,18 @@ export default function Prism9Popup({
                 <p className="text-sm leading-relaxed text-slate-400">{selectedObj.definition}</p>
                 <button
                   type="button"
+                  onClick={() => {
+                    setSelected(null);
+                    onRecenter(selectedObj.label);
+                  }}
+                  className="mt-1 w-full rounded-md border border-bio-teal/50 px-3 py-2 text-sm font-semibold text-bio-teal hover:bg-bio-teal/10"
+                >
+                  ⌖ Recenter on this node
+                </button>
+                <button
+                  type="button"
                   onClick={() => onLaunchFlight(selectedObj.label)}
-                  className="mt-1 w-full rounded-md bg-bio-teal px-3 py-2 text-sm font-semibold text-bio-navy hover:opacity-90"
+                  className="w-full rounded-md bg-bio-teal px-3 py-2 text-sm font-semibold text-bio-navy hover:opacity-90"
                 >
                   Launch flight to this node →
                 </button>
@@ -303,7 +366,11 @@ export default function Prism9Popup({
             ) : (
               <div className="space-y-3 text-sm text-slate-400">
                 <div className="text-xs uppercase tracking-widest text-slate-500">Flight deck</div>
-                <p>Click a node to land on it, or take a guided pass through the cluster.</p>
+                <p>
+                  Click a node to land on it; <strong className="text-slate-300">double-click</strong> a
+                  node — or click a link — to <strong className="text-slate-300">recenter</strong> the
+                  cluster on it. Or take a guided pass.
+                </p>
                 <button
                   type="button"
                   onClick={() => setTouring((t) => !t)}
