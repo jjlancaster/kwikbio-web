@@ -243,6 +243,12 @@ export async function resolveQuery(req: QueryManagerRequest): Promise<QueryManag
   const objects: QMObject[] = workObjects
     .filter((o) => o.layer <= plan.layerMax)
     .slice(0, plan.maxObjects);
+
+  // R1 "see what you're missing": how many more nodes full depth (Pro, layer 5)
+  // would reveal beyond this Level. The UI shows this as a locked teaser for
+  // freemium/anon users so the value of going deeper is visible, not hidden.
+  const fullDepthCount = workObjects.filter((o) => o.layer <= 5).length;
+  const deeperCount = Math.max(0, fullDepthCount - objects.length);
   const keepLabels = new Set(objects.map((o) => o.label));
 
   // 6. Provenance-stamp (honest flag).
@@ -267,6 +273,7 @@ export async function resolveQuery(req: QueryManagerRequest): Promise<QueryManag
     source: raw.source,
   };
   if (focusLabel) response.focus = focusLabel;
+  if (deeperCount > 0 && level !== "pro") response.deeperCount = deeperCount;
   if (requested.includes("lope") && plan.includeLope) response.lope = [];
   if (requested.includes("prism9")) response.prism9Graph = { nodes: objects.length, edges: edges.length };
   response.routes = level === "beginner" ? raw.routes.slice(0, 3) : raw.routes;

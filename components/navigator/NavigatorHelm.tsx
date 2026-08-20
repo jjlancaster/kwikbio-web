@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { GoalMode, QueryManagerResponse } from "@/lib/ars-query";
 import { useLevel } from "@/components/LevelContext";
+import { useEntitlement } from "@/components/Entitlement";
 import LevelBadge from "@/components/LevelBadge";
 import MissionControl from "./MissionControl";
 import NavigationComputer from "./NavigationComputer";
@@ -25,6 +26,7 @@ export default function NavigatorHelm() {
   // Level is the app-wide persistent control (shared with the nav badge), so the
   // helm selector and the global badge stay in sync and survive navigation.
   const { level } = useLevel();
+  const { isLocked, requestUnlock } = useEntitlement();
   const [goalMode, setGoalMode] = useState<GoalMode>("fix");
   const [result, setResult] = useState<QueryManagerResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -121,6 +123,21 @@ export default function NavigatorHelm() {
           </button>
         </div>
       </header>
+
+      {/* R1 — "see what you're missing": locked-depth teaser for freemium/anon. */}
+      {result?.deeperCount && isLocked("pro") ? (
+        <button
+          type="button"
+          onClick={() => requestUnlock("pro")}
+          className="mb-4 flex w-full items-center justify-between gap-3 rounded-md border border-bio-gold/30 bg-bio-gold/10 px-3 py-2 text-left text-sm text-bio-gold hover:bg-bio-gold/20"
+        >
+          <span>
+            🔒 <strong>+{result.deeperCount} deeper node{result.deeperCount > 1 ? "s" : ""}</strong> at
+            full (Pro) depth for this subject — locked.
+          </span>
+          <span className="shrink-0 font-semibold">Unlock →</span>
+        </button>
+      ) : null}
 
       {flightNotice && (
         <div className="mb-4 flex items-center justify-between gap-3 rounded-md border border-bio-teal/30 bg-bio-teal/10 px-3 py-2 text-sm text-bio-teal">
