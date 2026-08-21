@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Nav from "@/components/Nav";
+import SciCrushGate from "@/components/SciCrushGate";
 
 const TIERS = [
   {
@@ -35,6 +36,7 @@ const KITS = [
 
 export default function SciCrushPage() {
   return (
+    <SciCrushGate>
     <div className="min-h-screen bg-bio-navy text-slate-200">
       <Nav />
 
@@ -143,5 +145,6 @@ export default function SciCrushPage() {
         </Link>
       </section>
     </div>
+    </SciCrushGate>
   );
 }
