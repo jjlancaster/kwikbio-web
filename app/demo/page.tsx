@@ -136,7 +136,7 @@ function DemoPageInner() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             rows={2}
-            className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             placeholder="Enter a biomedical hypothesis or question…"
           />
           <button

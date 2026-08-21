@@ -1,4 +1,5 @@
 import Link from "next/link";
+import LevelBadge from "@/components/LevelBadge";
 
 export default function Nav() {
   return (
@@ -15,12 +16,16 @@ export default function Nav() {
           <Link href="/pricing" className="hover:text-bio-teal transition-colors">Pricing</Link>
           <Link href="/welcome" className="hover:text-bio-teal transition-colors">About</Link>
         </nav>
-        <Link
-          href="/pricing"
-          className="text-sm bg-bio-teal text-bio-navy font-semibold px-4 py-2 rounded-md hover:opacity-90 transition-opacity"
-        >
-          Start Free
-        </Link>
+        <div className="flex items-center gap-3">
+          {/* Persistent Level badge — sets the app-wide research depth (U1). */}
+          <LevelBadge compact />
+          <Link
+            href="/pricing"
+            className="text-sm bg-bio-teal text-bio-navy font-semibold px-4 py-2 rounded-md hover:opacity-90 transition-opacity"
+          >
+            Start Free
+          </Link>
+        </div>
       </div>
     </header>
   );
