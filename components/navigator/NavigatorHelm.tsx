@@ -1,10 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { GoalMode, Level, QueryManagerResponse } from "@/lib/ars-query";
+import type { GoalMode, QueryManagerResponse } from "@/lib/ars-query";
+import { useLevel } from "@/components/LevelContext";
+import { useEntitlement } from "@/components/Entitlement";
+import LevelBadge from "@/components/LevelBadge";
 import MissionControl from "./MissionControl";
 import NavigationComputer from "./NavigationComputer";
 import GraphRadar from "./GraphRadar";
+import Prism9Popup from "./Prism9Popup";
 
 // The 5 disease subjects (spec §2, Hydro-confirmed).
 const SUBJECTS = [
@@ -15,21 +19,34 @@ const SUBJECTS = [
   "Cancer",
 ] as const;
 
-const LEVELS: { value: Level; label: string; dot: string }[] = [
-  { value: "beginner", label: "Beginner", dot: "bg-emerald-400" },
-  { value: "novice", label: "Novice", dot: "bg-amber-400" },
-  { value: "pro", label: "Pro", dot: "bg-sky-400" },
-];
-
 // The TREE Navigation Helm — v4.2-feasible panels, Level-governed.
 // Driven entirely by /api/ars-query/resolve (the Query Manager).
 export default function NavigatorHelm() {
   const [subject, setSubject] = useState<string>(SUBJECTS[0]);
-  const [level, setLevel] = useState<Level>("beginner");
+  // Level is the app-wide persistent control (shared with the nav badge), so the
+  // helm selector and the global badge stay in sync and survive navigation.
+  const { level } = useLevel();
+  const { isLocked, requestUnlock } = useEntitlement();
   const [goalMode, setGoalMode] = useState<GoalMode>("fix");
   const [result, setResult] = useState<QueryManagerResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Prism9 entry flow (U2): popup cluster at Level depth → land / launch flight.
+  const [prism9Open, setPrism9Open] = useState(false);
+  const [flightNotice, setFlightNotice] = useState<string | null>(null);
+  // Recenter (R4): re-root the cluster on a node/predicate via current_focus.
+  const [focus, setFocus] = useState<string | null>(null);
+
+  const onRecenter = useCallback((label: string | null) => setFocus(label), []);
+
+  const onLaunchFlight = useCallback((nodeLabel: string | null) => {
+    setPrism9Open(false);
+    setFlightNotice(
+      nodeLabel
+        ? `Landed on “${nodeLabel}”. Full 3D free-flight is Navigator Layer 1 (Three.js) — next up.`
+        : "Navigator flight — 3D Layer 1 (Three.js) is next; explore the cluster in 2D for now."
+    );
+  }, []);
 
   const run = useCallback(async () => {
     setLoading(true);
@@ -42,6 +59,7 @@ export default function NavigatorHelm() {
           query: subject,
           subject,
           level,
+          current_focus: focus ?? undefined,
           requested: ["objects", "prism9", "lope", "provenance"],
         }),
       });
@@ -52,7 +70,7 @@ export default function NavigatorHelm() {
     } finally {
       setLoading(false);
     }
-  }, [subject, level]);
+  }, [subject, level, focus]);
 
   useEffect(() => {
     run();
@@ -75,7 +93,10 @@ export default function NavigatorHelm() {
             System
             <select
               value={subject}
-              onChange={(e) => setSubject(e.target.value)}
+              onChange={(e) => {
+                setSubject(e.target.value);
+                setFocus(null); // recenter is per-subject
+              }}
               className="ml-2 rounded-md border border-white/10 bg-white/5 px-2 py-1 text-sm text-white outline-none focus:border-bio-teal"
             >
               {SUBJECTS.map((s) => (
@@ -86,23 +107,51 @@ export default function NavigatorHelm() {
             </select>
           </label>
 
-          {/* Level selector — governs graph depth AND panel density */}
-          <div className="flex overflow-hidden rounded-md border border-white/10">
-            {LEVELS.map((l) => (
-              <button
-                key={l.value}
-                onClick={() => setLevel(l.value)}
-                className={`flex items-center gap-1.5 px-3 py-1 text-sm transition ${
-                  level === l.value ? "bg-bio-purple text-white" : "bg-transparent text-slate-400 hover:text-white"
-                }`}
-              >
-                <span className={`h-2 w-2 rounded-full ${l.dot}`} />
-                {l.label}
-              </button>
-            ))}
-          </div>
+          {/* Level selector — governs graph depth AND panel density. Shared
+              LevelBadge (ski-trail markers), bound to the app-wide Level so the
+              helm and the global nav badge stay in sync. */}
+          <LevelBadge />
+
+          {/* Prism9 entry flow (U2): open the ResearchCluster at Level depth. */}
+          <button
+            type="button"
+            onClick={() => setPrism9Open(true)}
+            disabled={!result || (result.objects?.length ?? 0) === 0}
+            className="rounded-md border border-bio-teal/40 bg-bio-teal/10 px-3 py-1.5 text-sm font-medium text-bio-teal transition hover:bg-bio-teal/20 disabled:opacity-40"
+          >
+            ◎ Prism9 Cluster
+          </button>
         </div>
       </header>
+
+      {/* R1 — "see what you're missing": locked-depth teaser for freemium/anon. */}
+      {result?.deeperCount && isLocked("pro") ? (
+        <button
+          type="button"
+          onClick={() => requestUnlock("pro")}
+          className="mb-4 flex w-full items-center justify-between gap-3 rounded-md border border-bio-gold/30 bg-bio-gold/10 px-3 py-2 text-left text-sm text-bio-gold hover:bg-bio-gold/20"
+        >
+          <span>
+            🔒 <strong>+{result.deeperCount} deeper node{result.deeperCount > 1 ? "s" : ""}</strong> at
+            full (Pro) depth for this subject — locked.
+          </span>
+          <span className="shrink-0 font-semibold">Unlock →</span>
+        </button>
+      ) : null}
+
+      {flightNotice && (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-md border border-bio-teal/30 bg-bio-teal/10 px-3 py-2 text-sm text-bio-teal">
+          <span>{flightNotice}</span>
+          <button
+            type="button"
+            onClick={() => setFlightNotice(null)}
+            aria-label="Dismiss"
+            className="text-bio-teal/70 hover:text-white"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {error && (
         <div className="mb-4 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">
@@ -139,6 +188,16 @@ export default function NavigatorHelm() {
           </>
         )}
       </footer>
+
+      <Prism9Popup
+        result={result}
+        open={prism9Open}
+        loading={loading}
+        focus={focus}
+        onClose={() => setPrism9Open(false)}
+        onRecenter={onRecenter}
+        onLaunchFlight={onLaunchFlight}
+      />
     </div>
   );
 }
