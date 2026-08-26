@@ -20,7 +20,7 @@ import AgeGate from "./AgeGate";
 export type AgeBand = "adult" | "minor" | "unknown";
 
 // Bump when the ToU text changes materially → users re-accept.
-export const TOU_VERSION = "2026-07-30-draft";
+export const TOU_VERSION = "2026-08-21-draft";
 const TOU_KEY = "kb.tou.version";
 const AGE_KEY = "kb.age.band";
 
