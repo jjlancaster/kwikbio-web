@@ -23,7 +23,7 @@ export default function ToUGate({ onAccept }: { onAccept: () => void }) {
         <h2 className="mb-3 text-xl font-semibold text-white">Terms of Use &amp; Disclaimer</h2>
 
         {/* DRAFT placeholder — replace with counsel-approved text. */}
-        <div className="mb-4 max-h-48 space-y-2 overflow-y-auto rounded-lg border border-white/10 bg-white/[0.03] p-3 text-sm text-slate-300">
+        <div className="mb-4 max-h-56 space-y-2 overflow-y-auto rounded-lg border border-white/10 bg-white/[0.03] p-3 text-sm text-slate-300">
           <p>
             <strong className="text-white">Research decision-support, not medical advice.</strong> kwiKBio
             surfaces AI- and knowledge-graph-generated hypotheses for research and
@@ -35,11 +35,26 @@ export default function ToUGate({ onAccept }: { onAccept: () => void }) {
             Results carry confidence and provenance signals and may be incomplete or
             wrong. You are responsible for independently verifying anything you rely on.
           </p>
+          <p>
+            <strong className="text-white">Free use contributes to the public commons.</strong> On the
+            free (Freemium) tier, knowledge generated from your use is added to the public
+            knowledge database — which includes linked HydroJoule resources. Subscribers may
+            keep work private in an Inrupt/Solid POD repository; Enterprise can run entirely
+            on private models. See{" "}
+            <Link href="/legal/terms" className="text-bio-teal underline">Terms of Use §5</Link>.
+          </p>
+          <p>
+            <strong className="text-white">Age.</strong> Some features require you to be 18 or older.
+            Under-18 users may use the free knowledge search but cannot buy a subscription
+            themselves — a parent/guardian or school must authorize it.{" "}
+            <strong className="text-white">SciCrush is 18+ only.</strong>
+          </p>
           <p className="text-slate-400">
             By continuing you agree to the{" "}
             <Link href="/legal/terms" className="text-bio-teal underline">Terms of Use</Link>{" "}
             and{" "}
-            <Link href="/legal/privacy" className="text-bio-teal underline">Privacy Policy</Link>.
+            <Link href="/legal/privacy" className="text-bio-teal underline">Privacy Policy</Link>,
+            governed by the laws of Vermont, USA.
           </p>
           <p className="text-[11px] italic text-slate-500">
             [DRAFT notice — placeholder text pending legal review.]
@@ -54,8 +69,9 @@ export default function ToUGate({ onAccept }: { onAccept: () => void }) {
             className="mt-0.5 accent-bio-teal"
           />
           <span>
-            I have read and agree to the Terms of Use and Privacy Policy, and I
-            understand this is research decision-support, not medical advice.
+            I have read and agree to the Terms of Use and Privacy Policy. I understand
+            this is research decision-support, not medical advice, and that free-tier
+            results are contributed to the public knowledge database.
           </span>
         </label>
 
