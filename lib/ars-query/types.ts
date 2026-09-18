@@ -145,4 +145,10 @@ export interface QueryManagerResponse {
   planNotes: string[];
   /** Whether the live ARS gateway answered, or we fell back to mock. */
   source: "gateway" | "mock";
+  /** Set when the caller asked for a deeper Level than their account allows. */
+  entitlementClamped?: boolean;
+  /** The Level that was asked for, when `entitlementClamped` is set. */
+  requestedLevel?: Level;
+  /** The Level actually executed, when `entitlementClamped` is set. */
+  entitledLevel?: Level;
 }

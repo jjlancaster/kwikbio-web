@@ -1,5 +1,6 @@
 import Link from "next/link";
 import LevelBadge from "@/components/LevelBadge";
+import AccountBadge from "@/components/AccountBadge";
 
 export default function Nav() {
   return (
@@ -19,6 +20,7 @@ export default function Nav() {
         <div className="flex items-center gap-3">
           {/* Persistent Level badge — sets the app-wide research depth (U1). */}
           <LevelBadge compact />
+          <AccountBadge />
           <Link
             href="/pricing"
             className="text-sm bg-bio-teal text-bio-navy font-semibold px-4 py-2 rounded-md hover:opacity-90 transition-opacity"

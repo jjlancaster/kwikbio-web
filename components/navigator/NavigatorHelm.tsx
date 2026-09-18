@@ -139,6 +139,22 @@ export default function NavigatorHelm() {
         </button>
       ) : null}
 
+      {/* Server clamped the Level below what was asked for (M-AUTH). The client
+          normally clamps first, so this is the honest fallback when it didn't. */}
+      {result?.entitlementClamped ? (
+        <button
+          type="button"
+          onClick={() => requestUnlock(result.requestedLevel ?? "pro")}
+          className="mb-4 flex w-full items-center justify-between gap-3 rounded-md border border-bio-gold/30 bg-bio-gold/10 px-3 py-2 text-left text-sm text-bio-gold hover:bg-bio-gold/20"
+        >
+          <span>
+            🔒 Answered at <strong>{result.entitledLevel}</strong> — your plan doesn&rsquo;t
+            include <strong>{result.requestedLevel}</strong> depth.
+          </span>
+          <span className="shrink-0 font-semibold">Upgrade →</span>
+        </button>
+      ) : null}
+
       {flightNotice && (
         <div className="mb-4 flex items-center justify-between gap-3 rounded-md border border-bio-teal/30 bg-bio-teal/10 px-3 py-2 text-sm text-bio-teal">
           <span>{flightNotice}</span>
