@@ -223,7 +223,7 @@ export default function GatewayClient() {
             disabled={queryState === "loading" || queryState === "streaming"}
             rows={3}
             placeholder={selectedBranch.sample}
-            className="w-full border border-slate-300 rounded-lg p-3 text-sm font-mono bg-white focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 disabled:bg-slate-50 disabled:text-slate-400 resize-y"
+            className="w-full border border-slate-300 rounded-lg p-3 text-sm font-mono bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 disabled:bg-slate-50 disabled:text-slate-400 resize-y"
           />
           <div className="flex flex-wrap items-center gap-3">
             <button

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { signIn } from "next-auth/react";
 
 export interface PreGateProps {
   queryText: string;
@@ -11,8 +12,16 @@ export interface PreGateProps {
 
 /**
  * PreGate — Conversion overlay for kwiKBio /demo.
- * Auth via kwikbio-api (JWT) — no Supabase dependency.
- * Anonymous skip available for beta testers.
+ *
+ * Signs in through Auth.js (M-AUTH), not the old kwikbio-api JWT flow. That
+ * flow posted to /api/auth/login and /api/auth/register, which were never
+ * built, and kept the resulting token in localStorage — a value the visitor
+ * could edit. Those paths are now served by the Auth.js catch-all, so leaving
+ * them would fail loudly rather than silently.
+ *
+ * There is no password field because there is no credentials provider: sign-in
+ * is a magic link, which also covers "register" (Auth.js creates the account on
+ * first use). Anonymous skip is preserved — freemium must stay open.
  */
 export default function PreGate({
   queryText,
@@ -22,7 +31,6 @@ export default function PreGate({
 }: PreGateProps) {
   const [mode, setMode] = useState<"register" | "login">("register");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
@@ -37,35 +45,19 @@ export default function PreGate({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim() || !password.trim()) return;
+    if (!email.trim()) return;
     setLoading(true);
     setError(null);
     try {
-      const endpoint = mode === "register" ? "/api/auth/register" : "/api/auth/login";
-      const payload =
-        mode === "register"
-          ? { email: email.trim(), password, name: name.trim() || undefined }
-          : { email: email.trim(), password };
-
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      // redirect:false so the "check your email" state renders in place rather
+      // than navigating away from the demo the visitor is mid-way through.
+      const res = await signIn("nodemailer", {
+        email: email.trim(),
+        callbackUrl: "/demo",
+        redirect: false,
       });
-      const data = await res.json() as { token?: string; user?: unknown; error?: string };
-
-      if (!res.ok || !data.token) {
-        throw new Error(data.error ?? `Error ${res.status}`);
-      }
-
-      // Persist token
-      if (typeof window !== "undefined") {
-        localStorage.setItem("kwikbio_token", data.token);
-        localStorage.setItem("kwikbio_user", JSON.stringify(data.user ?? {}));
-      }
-
+      if (res?.error) throw new Error("Could not send the sign-in link.");
       setDone(true);
-      onAuthSuccess?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -134,28 +126,19 @@ export default function PreGate({
               required
               className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
-              required
-              minLength={6}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
             <button
               type="submit"
               disabled={loading}
               className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-2.5 px-4 rounded-lg transition-colors"
             >
               {loading
-                ? mode === "register" ? "Creating account…" : "Signing in…"
-                : mode === "register" ? "Create free account →" : "Sign in →"}
+                ? "Sending link…"
+                : mode === "register" ? "Email me a sign-in link →" : "Email me a sign-in link →"}
             </button>
           </form>
         ) : (
           <div className="text-green-600 text-sm font-medium">
-            ✓ {mode === "register" ? "Account created!" : "Signed in!"} Full access unlocked.
+            ✓ Check your email for a sign-in link.
           </div>
         )}
 
