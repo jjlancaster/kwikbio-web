@@ -285,7 +285,7 @@ export default function Prism9Entry() {
               onChange={(e) => setKeyword(e.target.value)}
               onKeyDown={handleKey}
               placeholder="e.g. Parkinson's Disease, JAK2 pathway, blood pressure..."
-              className="flex-1 rounded-xl border border-white/15 bg-white/8 px-5 py-3.5 text-white placeholder-slate-500 outline-none focus:border-bio-teal focus:ring-1 focus:ring-bio-teal text-base"
+              className="flex-1 rounded-xl border border-white/15 bg-white/10 px-5 py-3.5 text-white placeholder-slate-500 outline-none focus:border-bio-teal focus:ring-1 focus:ring-bio-teal text-base"
               disabled={status === "loading"}
             />
             <button

@@ -11,4 +11,5 @@
   --bio-deep-navy: #0d0d2b;
 }
 
+html { color-scheme: dark; } /* UA form controls default dark — safety net so inputs never fall back to white */
 html, body { @apply bg-bio-navy text-slate-200 antialiased; }
