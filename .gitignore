@@ -6,3 +6,4 @@ out/
 *.log
 .vercel
 next-env.d.ts
+tsconfig.tsbuildinfo
